@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router";
 import { LayoutDashboard, Users, FileCheck, FileText, LogOut, Shield, Sparkles, ScrollText } from "lucide-react";
+import { Toaster } from "sonner";
 
 const navItems = [
   { path: "/admin/dashboard", label: "仪表盘", icon: LayoutDashboard },
@@ -73,6 +74,7 @@ export function AdminLayout() {
 
       {/* Main content */}
       <main className="flex-1 ml-64">
+        <Toaster position="top-right" richColors />
         <Outlet />
       </main>
     </div>

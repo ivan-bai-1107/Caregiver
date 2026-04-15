@@ -1,5 +1,6 @@
 import { Search, UserCheck, UserX, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface UserItem {
   id: number;
@@ -27,8 +28,11 @@ export function AdminUsersPage() {
   const [showConfirm, setShowConfirm] = useState<{ user: UserItem; action: "enable" | "disable" } | null>(null);
 
   const toggleStatus = (userId: number) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: u.status === "active" ? "inactive" as const : "active" as const } : u));
+    const user = users.find(u => u.id === userId);
+    const newStatus = user?.status === "active" ? "inactive" : "active";
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus as "active" | "inactive" } : u));
     setShowConfirm(null);
+    toast.success(newStatus === "active" ? `已启用用户「${user?.name}」` : `已禁用用户「${user?.name}」`);
   };
 
   const filteredUsers = users.filter(user => {

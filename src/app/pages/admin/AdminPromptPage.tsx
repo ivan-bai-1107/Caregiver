@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Sparkles, Edit2, Check, X, ToggleLeft, ToggleRight, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 const initialPrompts = [
   {
@@ -55,9 +56,11 @@ export function AdminPromptPage() {
   const [editContent, setEditContent] = useState("");
 
   const handleToggle = (id: number) => {
+    const prompt = prompts.find((p) => p.id === id);
     setPrompts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p))
     );
+    toast.success(prompt?.isActive ? `已停用「${prompt?.sceneName}」` : `已启用「${prompt?.sceneName}」`);
   };
 
   const handleEdit = (id: number) => {
@@ -69,6 +72,7 @@ export function AdminPromptPage() {
   };
 
   const handleSave = (id: number) => {
+    const prompt = prompts.find((p) => p.id === id);
     setPrompts((prev) =>
       prev.map((p) =>
         p.id === id
@@ -77,6 +81,7 @@ export function AdminPromptPage() {
       )
     );
     setEditingId(null);
+    toast.success(`「${prompt?.sceneName}」模板已保存`);
   };
 
   return (

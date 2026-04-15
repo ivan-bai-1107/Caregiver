@@ -1,5 +1,6 @@
 import { FileText, MessageSquare, Check, X, Eye, Clock } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface ReviewItem {
   id: number;
@@ -28,15 +29,19 @@ export function AdminReviewsPage() {
   ]);
 
   const approveItem = (id: number) => {
+    const item = reviews.find(r => r.id === id);
     setReviews(prev => prev.map(r => r.id === id ? { ...r, status: "approved" as const } : r));
     setPreviewItem(null);
+    toast.success(`已通过「${item?.title}」`);
   };
 
   const rejectItem = (id: number) => {
+    const item = reviews.find(r => r.id === id);
     setReviews(prev => prev.map(r => r.id === id ? { ...r, status: "rejected" as const, rejectReason: rejectReason || "不符合发布标准" } : r));
     setRejectModal(null);
     setRejectReason("");
     setPreviewItem(null);
+    toast.error(`已拒绝「${item?.title}」`);
   };
 
   const filteredReviews = reviews.filter((r) => r.status === activeTab);

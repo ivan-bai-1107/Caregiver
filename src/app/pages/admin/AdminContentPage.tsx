@@ -1,5 +1,6 @@
 import { Search, FileText, MessageSquare, Eye, ThumbsUp, Edit, Trash2, EyeOff } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface ContentItem {
   id: number;
@@ -29,18 +30,24 @@ export function AdminContentPage() {
   ]);
 
   const toggleVisibility = (id: number) => {
-    setContents(prev => prev.map(c => c.id === id ? { ...c, status: c.status === "published" ? "hidden" as const : "published" as const } : c));
+    const item = contents.find(c => c.id === id);
+    const newStatus = item?.status === "published" ? "hidden" : "published";
+    setContents(prev => prev.map(c => c.id === id ? { ...c, status: newStatus as "published" | "hidden" } : c));
+    toast.success(newStatus === "hidden" ? `已隐藏「${item?.title}」` : `已发布「${item?.title}」`);
   };
 
   const deleteItem = (id: number) => {
+    const item = contents.find(c => c.id === id);
     setContents(prev => prev.filter(c => c.id !== id));
     setDeleteConfirm(null);
+    toast.success(`已删除「${item?.title}」`);
   };
 
   const saveEdit = () => {
     if (editItem && editTitle.trim()) {
       setContents(prev => prev.map(c => c.id === editItem.id ? { ...c, title: editTitle } : c));
       setEditItem(null);
+      toast.success("内容已更新");
     }
   };
 

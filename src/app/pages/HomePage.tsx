@@ -8,6 +8,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
+import { PullToRefresh } from "../components/PullToRefresh";
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -46,7 +47,13 @@ export function HomePage() {
   const alertCount = recentAlerts.length;
 
   return (
-    <div className="min-h-screen bg-background pb-8">
+    <PullToRefresh
+      onRefresh={async () => {
+        await new Promise((r) => setTimeout(r, 1200));
+        toast.success("数据已刷新");
+      }}
+      className="min-h-screen bg-background pb-8"
+    >
       <Toaster position="top-center" richColors />
       {/* Header */}
       <div className="bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
@@ -224,6 +231,6 @@ export function HomePage() {
           </button>
         </div>
       </div>
-    </div>
+    </PullToRefresh>
   );
 }

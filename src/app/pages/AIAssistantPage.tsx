@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import {
   ArrowLeft,
@@ -14,6 +14,11 @@ import {
   ChevronRight,
   User,
   Bot,
+  History,
+  Plus,
+  Trash2,
+  X,
+  MessageSquare,
 } from "lucide-react";
 
 type MessageRole = "user" | "ai";
@@ -28,6 +33,14 @@ interface ChatMessage {
   draftData?: { label: string; value: string; highlight?: boolean }[];
   sources?: string[];
   riskNote?: string;
+}
+
+interface ChatSession {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const quickActions = [
@@ -65,7 +78,6 @@ function detectIntent(text: string): IntentType {
 
 function generateAIResponse(text: string, intent: IntentType): Omit<ChatMessage, "id" | "timestamp"> {
   if (intent === "draft-record") {
-    // Parse some mock data from user input
     const hasZhangMing = text.includes("张明");
     const patient = hasZhangMing ? "张明" : "患者";
     return {
@@ -99,7 +111,6 @@ function generateAIResponse(text: string, intent: IntentType): Omit<ChatMessage,
     };
   }
 
-  // QA responses based on keywords
   if (text.includes("高血压") || text.includes("血压")) {
     return {
       role: "ai",
@@ -131,7 +142,6 @@ function generateAIResponse(text: string, intent: IntentType): Omit<ChatMessage,
     };
   }
 
-  // Default response
   return {
     role: "ai",
     content:
@@ -146,11 +156,70 @@ function genId() {
   return `msg-${++msgIdCounter}-${Date.now()}`;
 }
 
+function genSessionId() {
+  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// Extract title from first user message
+function extractTitle(msg: string): string {
+  const trimmed = msg.trim();
+  if (trimmed.length <= 20) return trimmed;
+  return trimmed.slice(0, 20) + "...";
+}
+
+// Mock history sessions
+const mockHistorySessions: ChatSession[] = [
+  {
+    id: "hist-1",
+    title: "高血压饮食注意事项",
+    messages: [
+      { id: "h1-1", role: "user", content: "高血压患者在日常饮食上需要注意哪些事项？", timestamp: new Date("2026-04-14T10:30:00") },
+      { id: "h1-2", role: "ai", content: "高血压患者在日常饮食上需注意以下几点：\n\n1. **限制钠盐摄入**：每日盐摄入量建议不超过 5g\n2. **多食富含钾的食物**：如香蕉、土豆、菠菜\n3. **减少高脂肪食物**\n4. **避免饮酒**\n5. **规律进食**", timestamp: new Date("2026-04-14T10:30:05"), intent: "qa", sources: ["中国高血压防治指南（2023修订版）"], riskNote: "以上为一般性护理参考建议。" },
+    ],
+    createdAt: new Date("2026-04-14T10:30:00"),
+    updatedAt: new Date("2026-04-14T10:30:05"),
+  },
+  {
+    id: "hist-2",
+    title: "记录张明血压数据",
+    messages: [
+      { id: "h2-1", role: "user", content: "帮我记录今天上午测量的血压，张明，收缩压135，舒张压88", timestamp: new Date("2026-04-13T09:15:00") },
+      { id: "h2-2", role: "ai", content: "好的，我已根据您的描述生成了一份护理记录草稿，请核对信息：", timestamp: new Date("2026-04-13T09:15:05"), intent: "draft-record", draftData: [{ label: "患者", value: "张明" }, { label: "收缩压", value: "135 mmHg", highlight: true }, { label: "舒张压", value: "88 mmHg", highlight: true }] },
+    ],
+    createdAt: new Date("2026-04-13T09:15:00"),
+    updatedAt: new Date("2026-04-13T09:15:05"),
+  },
+  {
+    id: "hist-3",
+    title: "创建每日测血压任务",
+    messages: [
+      { id: "h3-1", role: "user", content: "帮我创建一个每天早上8点给张明测血压的任务", timestamp: new Date("2026-04-12T14:20:00") },
+      { id: "h3-2", role: "ai", content: "收到！我已为您解析任务信息并生成草稿：", timestamp: new Date("2026-04-12T14:20:05"), intent: "draft-task", draftData: [{ label: "患者", value: "张明" }, { label: "任务名称", value: "测量血压" }, { label: "提醒时间", value: "每天 08:00" }] },
+    ],
+    createdAt: new Date("2026-04-12T14:20:00"),
+    updatedAt: new Date("2026-04-12T14:20:05"),
+  },
+  {
+    id: "hist-4",
+    title: "糖尿病护理要点咨询",
+    messages: [
+      { id: "h4-1", role: "user", content: "糖尿病患者日常护理有哪些要点？", timestamp: new Date("2026-04-11T16:00:00") },
+      { id: "h4-2", role: "ai", content: "糖尿病患者的日常护理要点包括：\n\n1. **血糖监测**\n2. **饮食控制**\n3. **规律运动**\n4. **足部护理**\n5. **按时服药**", timestamp: new Date("2026-04-11T16:00:05"), intent: "qa" },
+    ],
+    createdAt: new Date("2026-04-11T16:00:00"),
+    updatedAt: new Date("2026-04-11T16:00:05"),
+  },
+];
+
 export function AIAssistantPage() {
   const navigate = useNavigate();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [sessions, setSessions] = useState<ChatSession[]>(mockHistorySessions);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -164,6 +233,30 @@ export function AIAssistantPage() {
     scrollToBottom();
   }, [messages, isTyping]);
 
+  const saveCurrentSession = useCallback((msgs: ChatMessage[], sessionId: string | null) => {
+    if (msgs.length === 0) return sessionId;
+
+    if (sessionId) {
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId ? { ...s, messages: msgs, updatedAt: new Date() } : s
+        )
+      );
+      return sessionId;
+    } else {
+      const firstUserMsg = msgs.find((m) => m.role === "user");
+      const newSession: ChatSession = {
+        id: genSessionId(),
+        title: firstUserMsg ? extractTitle(firstUserMsg.content) : "新对话",
+        messages: msgs,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setSessions((prev) => [newSession, ...prev]);
+      return newSession.id;
+    }
+  }, []);
+
   const handleSend = (text?: string) => {
     const msg = (text || input).trim();
     if (!msg || isTyping) return;
@@ -174,16 +267,15 @@ export function AIAssistantPage() {
       content: msg,
       timestamp: new Date(),
     };
-    setMessages((prev) => [...prev, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInput("");
     setIsTyping(true);
 
-    // Auto-resize textarea back
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
 
-    // Simulate AI response
     const intent = detectIntent(msg);
     setTimeout(() => {
       const aiResponse = generateAIResponse(msg, intent);
@@ -192,24 +284,58 @@ export function AIAssistantPage() {
         ...aiResponse,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, aiMsg]);
+      const updatedMessages = [...newMessages, aiMsg];
+      setMessages(updatedMessages);
       setIsTyping(false);
+
+      // Save session
+      const id = saveCurrentSession(updatedMessages, currentSessionId);
+      if (!currentSessionId) setCurrentSessionId(id);
     }, 800 + Math.random() * 800);
   };
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    // Auto resize
     e.target.style.height = "auto";
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
   };
 
+  const handleNewChat = () => {
+    setMessages([]);
+    setCurrentSessionId(null);
+    setShowHistory(false);
+  };
+
+  const handleLoadSession = (session: ChatSession) => {
+    setMessages(session.messages);
+    setCurrentSessionId(session.id);
+    setShowHistory(false);
+  };
+
+  const handleDeleteSession = (sessionId: string) => {
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    if (currentSessionId === sessionId) {
+      setMessages([]);
+      setCurrentSessionId(null);
+    }
+    setDeleteConfirm(null);
+  };
+
   const isEmpty = messages.length === 0 && !isTyping;
+
+  const formatDate = (date: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days === 0) return "今天";
+    if (days === 1) return "昨天";
+    if (days < 7) return `${days}天前`;
+    return date.toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
+  };
 
   const renderContent = (content: string) => {
     return content.split("\n").map((line, i) => {
       if (!line.trim()) return <br key={i} />;
-      // Bold markdown
       const parts = line.split(/(\*\*.*?\*\*)/g);
       return (
         <p key={i} className="leading-relaxed">
@@ -238,7 +364,18 @@ export function AIAssistantPage() {
             </h1>
             <p className="text-xs text-white/60 mt-0.5">AI 仅供辅助，重要决策请遵医嘱</p>
           </div>
-          <div className="w-10" />
+          <button
+            onClick={() => setShowHistory(true)}
+            className="p-2 -mr-2 relative"
+            title="历史对话"
+          >
+            <History className="w-5 h-5" />
+            {sessions.length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-white/30 text-[10px] rounded-full flex items-center justify-center backdrop-blur-sm">
+                {sessions.length}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
@@ -280,6 +417,40 @@ export function AIAssistantPage() {
               })}
             </div>
 
+            {/* Recent History Quick Access */}
+            {sessions.length > 0 && (
+              <div className="w-full mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">最近对话</p>
+                  <button
+                    onClick={() => setShowHistory(true)}
+                    className="text-xs text-primary flex items-center gap-1"
+                  >
+                    全部
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {sessions.slice(0, 3).map((session) => (
+                    <button
+                      key={session.id}
+                      onClick={() => handleLoadSession(session)}
+                      className="w-full flex items-center gap-3 p-3 bg-card rounded-xl border border-border hover:border-primary/30 transition-colors text-left"
+                    >
+                      <MessageSquare className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate">{session.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(session.updatedAt)} · {session.messages.length} 条消息
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="w-full bg-muted/30 rounded-xl p-3 border border-border">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-3.5 h-3.5 text-accent flex-shrink-0 mt-0.5" />
@@ -296,7 +467,6 @@ export function AIAssistantPage() {
           {messages.map((msg) => (
             <div key={msg.id}>
               {msg.role === "user" ? (
-                /* User Message */
                 <div className="flex justify-end gap-2.5">
                   <div className="max-w-[80%]">
                     <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-3">
@@ -311,20 +481,17 @@ export function AIAssistantPage() {
                   </div>
                 </div>
               ) : (
-                /* AI Message */
                 <div className="flex gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
                     <Bot className="w-4 h-4 text-primary" />
                   </div>
                   <div className="max-w-[85%] space-y-2.5">
-                    {/* Main content bubble */}
                     <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3">
                       <div className="text-sm text-foreground/85 space-y-1">
                         {renderContent(msg.content)}
                       </div>
                     </div>
 
-                    {/* Draft Data Card */}
                     {msg.draftData && (
                       <div className="bg-card border border-primary/20 rounded-2xl p-4">
                         <div className="flex items-center gap-2 mb-3">
@@ -364,7 +531,6 @@ export function AIAssistantPage() {
                       </div>
                     )}
 
-                    {/* Sources */}
                     {msg.sources && msg.sources.length > 0 && (
                       <div className="bg-muted/30 rounded-xl px-3 py-2.5">
                         <div className="flex items-center gap-1.5 mb-1.5">
@@ -380,7 +546,6 @@ export function AIAssistantPage() {
                       </div>
                     )}
 
-                    {/* Risk Note */}
                     {msg.riskNote && (
                       <div className="flex items-start gap-2 bg-accent/5 border border-accent/15 rounded-xl px-3 py-2.5">
                         <AlertTriangle className="w-3.5 h-3.5 text-accent flex-shrink-0 mt-0.5" />
@@ -417,7 +582,6 @@ export function AIAssistantPage() {
 
       {/* Input Area */}
       <div className="px-4 py-3 border-t border-border bg-card flex-shrink-0">
-        {/* Quick action chips when chatting */}
         {messages.length > 0 && (
           <div className="flex gap-2 mb-2.5 overflow-x-auto pb-1">
             {quickActions.map((a, i) => {
@@ -436,6 +600,15 @@ export function AIAssistantPage() {
           </div>
         )}
         <div className="flex items-end gap-2">
+          {messages.length > 0 && (
+            <button
+              onClick={handleNewChat}
+              className="w-10 h-10 rounded-xl bg-muted/50 border border-border flex items-center justify-center flex-shrink-0 hover:bg-muted transition-colors"
+              title="新对话"
+            >
+              <Plus className="w-4 h-4 text-muted-foreground" />
+            </button>
+          )}
           <div className="flex-1 relative">
             <textarea
               ref={textareaRef}
@@ -468,6 +641,127 @@ export function AIAssistantPage() {
           </button>
         </div>
       </div>
+
+      {/* History Drawer */}
+      {showHistory && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setShowHistory(false); setDeleteConfirm(null); }} />
+          {/* Drawer */}
+          <div className="relative ml-auto w-[85%] max-w-sm bg-background h-full flex flex-col animate-in slide-in-from-right duration-300">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between px-5 pt-12 pb-4 border-b border-border">
+              <div>
+                <h2 className="text-lg" style={{ fontFamily: "var(--font-display)" }}>
+                  历史对话
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">{sessions.length} 条对话记录</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleNewChat}
+                  className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 transition-colors"
+                  title="新对话"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => { setShowHistory(false); setDeleteConfirm(null); }}
+                  className="p-2 hover:bg-muted rounded-xl transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+            </div>
+
+            {/* Session List */}
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              {sessions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <MessageSquare className="w-12 h-12 mb-3 opacity-30" />
+                  <p className="text-sm">暂无历史对话</p>
+                  <p className="text-xs mt-1">开始一个新对话吧</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {sessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className={`rounded-2xl border transition-colors ${
+                        currentSessionId === session.id
+                          ? "border-primary/30 bg-primary/5"
+                          : "border-border bg-card hover:border-primary/20"
+                      }`}
+                    >
+                      <button
+                        onClick={() => handleLoadSession(session)}
+                        className="w-full p-4 text-left"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                            currentSessionId === session.id ? "bg-primary/15" : "bg-muted"
+                          }`}>
+                            <MessageSquare className={`w-4 h-4 ${
+                              currentSessionId === session.id ? "text-primary" : "text-muted-foreground"
+                            }`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <h3 className="text-sm font-medium truncate pr-2">{session.title}</h3>
+                              {currentSessionId === session.id && (
+                                <span className="px-2 py-0.5 bg-primary/15 text-primary text-[10px] rounded-full flex-shrink-0">
+                                  当前
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate mb-1">
+                              {session.messages[session.messages.length - 1]?.content.slice(0, 50)}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{formatDate(session.updatedAt)}</span>
+                              <span>·</span>
+                              <span>{session.messages.length} 条消息</span>
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                      <div className="px-4 pb-3 flex justify-end">
+                        {deleteConfirm === session.id ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">确认删除？</span>
+                            <button
+                              onClick={() => handleDeleteSession(session.id)}
+                              className="px-2.5 py-1 text-xs bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                            >
+                              删除
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(null)}
+                              className="px-2.5 py-1 text-xs bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors"
+                            >
+                              取消
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirm(session.id);
+                            }}
+                            className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
