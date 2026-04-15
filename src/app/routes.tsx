@@ -1,13 +1,13 @@
 import { createBrowserRouter } from "react-router";
-import { Layout } from "./components/Layout";
+import { AppLayout } from "@/shared/layout/AppLayout";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
-import { HomePage } from "./pages/HomePage";
+import { HomePage } from "@/features/home/pages/HomePage";
 import { PatientListPage } from "./pages/PatientListPage";
-import { PatientDetailPage } from "./pages/PatientDetailPage";
+import { PatientDetailPage } from "@/features/patients/pages/PatientDetailPage";
 import { PatientFormPage } from "./pages/PatientFormPage";
 import { RecordListPage } from "./pages/RecordListPage";
-import { RecordFormPage } from "./pages/RecordFormPage";
+import { RecordFormPage } from "@/features/records/pages/RecordFormPage";
 import { TaskListPage } from "./pages/TaskListPage";
 import { TaskFormPage } from "./pages/TaskFormPage";
 import { HealthTrendPage } from "./pages/HealthTrendPage";
@@ -57,7 +57,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/",
-    Component: Layout,
+    Component: AppLayout,
     children: [
       { index: true, Component: HomePage },
       { path: "care", Component: CareWorkflowPage },

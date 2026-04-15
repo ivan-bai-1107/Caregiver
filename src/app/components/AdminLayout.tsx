@@ -1,5 +1,14 @@
 import { NavLink, Outlet, useNavigate } from "react-router";
-import { LayoutDashboard, Users, FileCheck, FileText, LogOut, Shield, Sparkles, ScrollText } from "lucide-react";
+import {
+  FileCheck,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  ScrollText,
+  Shield,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import { Toaster } from "sonner";
 
 const navItems = [
@@ -16,7 +25,6 @@ export function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex">
-      {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
@@ -24,7 +32,9 @@ export function AdminLayout() {
               <Shield className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-sm" style={{ fontFamily: 'var(--font-display)' }}>医疗照顾者系统</h1>
+              <h1 className="text-sm" style={{ fontFamily: "var(--font-display)" }}>
+                医疗照顾者系统
+              </h1>
               <p className="text-xs text-gray-500">后台管理</p>
             </div>
           </div>
@@ -33,15 +43,14 @@ export function AdminLayout() {
         <nav className="flex-1 p-4 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
+
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-colors ${
-                    isActive
-                      ? "bg-primary text-white"
-                      : "text-gray-600 hover:bg-gray-100"
+                    isActive ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"
                   }`
                 }
               >
@@ -72,7 +81,6 @@ export function AdminLayout() {
         </div>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1 ml-64">
         <Toaster position="top-right" richColors />
         <Outlet />
