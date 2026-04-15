@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   buildRecordDraftPreview,
+  recordTypeOptions,
 } from "../../../entities/care-record/mapper";
 import {
   createEmptyRecordDraft,
@@ -14,13 +15,33 @@ import { getRecordMetricFields } from "./recordFormConfig";
 import {
   getRecordFormBootstrap,
   submitRecordDraft,
-} from "../services/mockRecordFormService";
+} from "../services/record.service";
 
 export function useRecordFormState() {
-  const [bootstrap] = useState(() => getRecordFormBootstrap());
+  const [availablePatients, setAvailablePatients] = useState<RecordFormState["availablePatients"]>([]);
   const [draft, setDraft] = useState<CareRecordDraft>(() => createEmptyRecordDraft());
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
+
+  async function loadBootstrap() {
+    setIsLoading(true);
+    setLoadError(null);
+
+    try {
+      const bootstrap = await getRecordFormBootstrap();
+      setAvailablePatients(bootstrap.availablePatients);
+    } catch (error) {
+      setLoadError("记录表单初始化失败，请稍后重试。");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadBootstrap();
+  }, []);
 
   const metricFields = useMemo(
     () => getRecordMetricFields(draft.recordType),
@@ -36,11 +57,13 @@ export function useRecordFormState() {
 
   const formState: RecordFormState = {
     draft,
-    availablePatients: bootstrap.availablePatients,
-    recordTypes: bootstrap.recordTypes,
+    availablePatients,
+    recordTypes: recordTypeOptions,
     metricFields,
     preview,
     validation,
+    isLoading,
+    loadError,
     isSubmitting,
   };
 
@@ -110,5 +133,6 @@ export function useRecordFormState() {
     selectRecordType,
     getFieldError,
     submit,
+    retryBootstrap: loadBootstrap,
   };
 }

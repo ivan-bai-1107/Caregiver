@@ -6,7 +6,7 @@ import {
   toCareTaskSummary,
 } from "@/entities/care-task/mapper";
 import type { CareTask } from "@/entities/care-task/model";
-import { mockPatients } from "@/entities/patient/mock";
+import { listPatients } from "@/features/patients/services/patient.service";
 import type {
   TaskDisplayStatus,
   TaskFilterTab,
@@ -32,12 +32,12 @@ function getTaskDisplayStatus(task: TaskListItemView): TaskDisplayStatus {
   return "pending";
 }
 
-function toTaskListItemView(task: CareTask): TaskListItemView {
+function toTaskListItemView(task: CareTask, patientNameMap: Map<string, string>): TaskListItemView {
   const summary = toCareTaskSummary(task, taskReferenceTime);
-  const patient = mockPatients.find((item) => item.id === task.patientId);
+  const patientName = patientNameMap.get(task.patientId) ?? "未关联患者";
   const displayStatus = getTaskDisplayStatus({
     ...summary,
-    patientName: patient?.name ?? "未关联患者",
+    patientName,
     remindTimeLabel: "",
     repeatRuleLabel: "",
     priorityLabel: "",
@@ -48,7 +48,7 @@ function toTaskListItemView(task: CareTask): TaskListItemView {
 
   return {
     ...summary,
-    patientName: patient?.name ?? "未关联患者",
+    patientName,
     remindTimeLabel: getCareTaskTimeLabel(task),
     repeatRuleLabel: careTaskRepeatRuleLabels[task.repeatRule],
     priorityLabel: careTaskPriorityLabels[task.priority],
@@ -90,6 +90,7 @@ function filterTaskItems(items: TaskListItemView[], filter: TaskListFilter) {
 
 export function useTaskListState() {
   const [tasks, setTasks] = useState<CareTask[]>([]);
+  const [patientNameMap, setPatientNameMap] = useState<Map<string, string>>(new Map());
   const [activeFilter, setActiveFilter] = useState<TaskListFilter>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,8 +100,9 @@ export function useTaskListState() {
     setError(null);
 
     try {
-      const nextTasks = await listCareTasks();
+      const [nextTasks, patients] = await Promise.all([listCareTasks(), listPatients()]);
       setTasks(nextTasks);
+      setPatientNameMap(new Map(patients.map((patient) => [patient.id, patient.name])));
     } catch (loadError) {
       setError("护理任务加载失败，请稍后重试。");
     } finally {
@@ -136,7 +138,7 @@ export function useTaskListState() {
     return currentTask;
   }
 
-  const items = tasks.map(toTaskListItemView);
+  const items = tasks.map((task) => toTaskListItemView(task, patientNameMap));
   const summary = buildTaskListSummary(items);
   const filterTabs = buildTaskFilterTabs(summary, items.length);
   const filteredItems = filterTaskItems(items, activeFilter);

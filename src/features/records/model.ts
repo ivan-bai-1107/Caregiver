@@ -31,5 +31,7 @@ export interface RecordFormState {
   metricFields: RecordMetricFieldDefinition[];
   preview: RecordDraftPreview | null;
   validation: RecordDraftValidationResult;
+  isLoading: boolean;
+  loadError: string | null;
   isSubmitting: boolean;
 }

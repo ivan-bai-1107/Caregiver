@@ -12,8 +12,17 @@ import { useHomePageState } from "../state/useHomePageState";
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { summary, healthAlerts, taskItems, recentPatients, completeTask, refresh } =
-    useHomePageState();
+  const {
+    summary,
+    healthAlerts,
+    taskItems,
+    recentPatients,
+    completeTask,
+    refresh,
+    isLoading,
+    error,
+    retry,
+  } = useHomePageState();
 
   return (
     <PullToRefresh
@@ -41,21 +50,52 @@ export function HomePage() {
 
       <HomeHealthAlertsSection alerts={healthAlerts} />
 
-      <HomeTaskSection
-        tasks={taskItems}
-        onViewAll={() => navigate(appRoutes.tasks)}
-        onCompleteTask={(taskId, title) => {
-          completeTask(taskId);
-          toast.success(`已完成「${title}」`);
-        }}
-      />
+      {isLoading ? (
+        <div className="px-6 py-6">
+          <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
+            首页数据加载中...
+          </div>
+        </div>
+      ) : null}
 
-      <RecentPatientsSection
-        patients={recentPatients}
-        onViewAll={() => navigate(appRoutes.patients)}
-        onOpenPatient={(patientId) => navigate(appRoutes.patientDetail(patientId))}
-        onAddPatient={() => navigate(appRoutes.newPatient)}
-      />
+      {!isLoading && error ? (
+        <div className="px-6 py-6">
+          <div className="rounded-2xl border border-accent/20 bg-accent/5 p-5">
+            <p className="text-sm font-medium text-accent">工作台加载失败</p>
+            <p className="mt-2 text-sm text-foreground/75">{error}</p>
+            <button
+              className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm text-primary-foreground"
+              onClick={() => void retry()}
+            >
+              重新加载
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {!isLoading && !error ? (
+        <HomeTaskSection
+          tasks={taskItems}
+          onViewAll={() => navigate(appRoutes.tasks)}
+          onCompleteTask={async (taskId, title) => {
+            try {
+              await completeTask(taskId);
+              toast.success(`已完成「${title}」`);
+            } catch {
+              toast.error("任务状态更新失败，请稍后重试。");
+            }
+          }}
+        />
+      ) : null}
+
+      {!isLoading && !error ? (
+        <RecentPatientsSection
+          patients={recentPatients}
+          onViewAll={() => navigate(appRoutes.patients)}
+          onOpenPatient={(patientId) => navigate(appRoutes.patientDetail(patientId))}
+          onAddPatient={() => navigate(appRoutes.newPatient)}
+        />
+      ) : null}
     </PullToRefresh>
   );
 }

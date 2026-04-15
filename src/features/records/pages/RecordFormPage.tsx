@@ -17,6 +17,7 @@ export function RecordFormPage() {
     selectRecordType,
     getFieldError,
     submit,
+    retryBootstrap,
   } = useRecordFormState();
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -55,7 +56,32 @@ export function RecordFormPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="px-6 py-6 space-y-5 pb-10">
+      {formState.isLoading ? (
+        <div className="px-6 py-10">
+          <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
+            记录表单加载中...
+          </div>
+        </div>
+      ) : null}
+
+      {!formState.isLoading && formState.loadError ? (
+        <div className="px-6 py-10">
+          <div className="rounded-2xl border border-accent/20 bg-accent/5 p-5">
+            <p className="text-sm font-medium text-accent">记录表单初始化失败</p>
+            <p className="mt-2 text-sm text-foreground/75">{formState.loadError}</p>
+            <button
+              className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm text-primary-foreground"
+              onClick={() => void retryBootstrap()}
+              type="button"
+            >
+              重新加载
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {!formState.isLoading && !formState.loadError ? (
+        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-5 pb-10">
         <div className="bg-card rounded-2xl p-5 border border-border space-y-4">
           <h2 className="text-sm text-muted-foreground uppercase tracking-wide">基本信息</h2>
 
@@ -165,7 +191,8 @@ export function RecordFormPage() {
           <Save className="w-5 h-5" />
           <span>{formState.isSubmitting ? "保存中..." : "保存记录"}</span>
         </button>
-      </form>
+        </form>
+      ) : null}
     </div>
   );
 }
