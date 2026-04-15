@@ -4,7 +4,6 @@ import { appRoutes } from "../../../shared/constants/routes";
 import { formatDashboardDate } from "../../../shared/lib/date";
 import { PullToRefresh } from "../../../shared/ui/PullToRefresh";
 import { HomeHealthAlertsSection } from "../components/HomeHealthAlertsSection";
-import { HomeAiEntryCard } from "../components/HomeAiEntryCard";
 import { HomeSummaryCard } from "../components/HomeSummaryCard";
 import { HomeTaskSection } from "../components/HomeTaskSection";
 import { RecentPatientsSection } from "../components/RecentPatientsSection";
@@ -45,7 +44,6 @@ export function HomePage() {
         </div>
 
         <HomeSummaryCard summary={summary} />
-        <HomeAiEntryCard onOpen={() => navigate(appRoutes.aiAssistant)} />
       </div>
 
       <HomeHealthAlertsSection alerts={healthAlerts} />

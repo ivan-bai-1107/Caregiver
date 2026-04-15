@@ -95,6 +95,11 @@ export async function listCareTasks() {
   return (response.items ?? []).map(toCareTask);
 }
 
+export async function getCareTask(taskId: string) {
+  const response = await apiClient.get<CareTaskDto>(`/api/tasks/${taskId}`);
+  return toCareTask(response);
+}
+
 export async function completeCareTask(taskId: string) {
   const response = await apiClient.post<CareTaskDto>(`/api/tasks/${taskId}/complete`, {});
   return toCareTask(response);
@@ -108,6 +113,22 @@ export async function getTaskFormBootstrap(): Promise<TaskFormBootstrap> {
 
 export async function createCareTask(draft: CareTaskDraft) {
   const response = await apiClient.post<CareTaskDto>("/api/tasks", {
+    patientId: draft.patientId,
+    title: draft.title,
+    description: draft.description,
+    taskType: draft.taskType,
+    remindTime: draft.remindTime,
+    repeatRule: draft.repeatRule,
+    priority: draft.priority,
+    remindOffsetMinutes: draft.remindOffsetMinutes,
+    status: draft.status,
+  });
+
+  return toCareTask(response);
+}
+
+export async function updateCareTask(taskId: string, draft: CareTaskDraft) {
+  const response = await apiClient.put<CareTaskDto>(`/api/tasks/${taskId}`, {
     patientId: draft.patientId,
     title: draft.title,
     description: draft.description,

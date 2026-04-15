@@ -128,8 +128,26 @@ export async function getRecordFormBootstrap() {
   };
 }
 
+export async function getCareRecord(recordId: string) {
+  const response = await apiClient.get<CareRecordDto>(`/api/care-records/${recordId}`);
+  return toCareRecord(response);
+}
+
 export async function submitRecordDraft(draft: CareRecordDraft) {
   const response = await apiClient.post<CareRecordDto>("/api/care-records", {
+    patientId: draft.patientId,
+    recordType: draft.recordType,
+    occurredAt: draft.occurredAt,
+    notes: draft.notes,
+    source: "manual",
+    metrics: toCareMetrics(draft),
+  });
+
+  return toCareRecord(response);
+}
+
+export async function updateCareRecord(recordId: string, draft: CareRecordDraft) {
+  const response = await apiClient.put<CareRecordDto>(`/api/care-records/${recordId}`, {
     patientId: draft.patientId,
     recordType: draft.recordType,
     occurredAt: draft.occurredAt,
