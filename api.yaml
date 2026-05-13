@@ -1,0 +1,1095 @@
+openapi: 3.1.0
+info:
+  title: Caregiver App API
+  version: 0.1.0
+  description: >
+    First-batch non-AI APIs for frontend mock and contract alignment.
+    Covers auth, home, patients, care-records, tasks, and trend series.
+
+servers:
+  - url: http://localhost:8000
+
+tags:
+  - name: Auth
+  - name: Home
+  - name: Patients
+  - name: Records
+  - name: Tasks
+  - name: Trends
+
+paths:
+  /api/auth/email/send-code:
+    post:
+      tags: [Auth]
+      summary: Send email verification code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendCodeRequest'
+      responses:
+        '200':
+          description: Verification code sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicSuccessResponse'
+
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Register success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+
+  /api/users/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+
+  /api/home/summary:
+    get:
+      tags: [Home]
+      summary: Get home page aggregated data
+      responses:
+        '200':
+          description: Home page data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomePageDataResponse'
+
+  /api/patients:
+    get:
+      tags: [Patients]
+      summary: List patients
+      parameters:
+        - in: query
+          name: keyword
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+      responses:
+        '200':
+          description: Patient list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientListResponse'
+
+    post:
+      tags: [Patients]
+      summary: Create patient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientCreateRequest'
+      responses:
+        '200':
+          description: Patient created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+
+  /api/patients/{id}:
+    get:
+      tags: [Patients]
+      summary: Get patient detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Patient detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+
+    put:
+      tags: [Patients]
+      summary: Update patient
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientUpdateRequest'
+      responses:
+        '200':
+          description: Patient updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+
+  /api/patients/{id}/dashboard:
+    get:
+      tags: [Patients]
+      summary: Get patient dashboard aggregate data
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Patient dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientDashboardResponse'
+
+  /api/care-records:
+    get:
+      tags: [Records]
+      summary: List care records
+      parameters:
+        - in: query
+          name: patientId
+          schema:
+            type: string
+        - in: query
+          name: recordType
+          schema:
+            $ref: '#/components/schemas/RecordType'
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+      responses:
+        '200':
+          description: Care record list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareRecordListResponse'
+
+    post:
+      tags: [Records]
+      summary: Create care record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CareRecordDraft'
+      responses:
+        '200':
+          description: Care record created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareRecordResponse'
+
+  /api/care-records/{id}:
+    get:
+      tags: [Records]
+      summary: Get care record detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Care record detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareRecordResponse'
+
+    put:
+      tags: [Records]
+      summary: Update care record
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CareRecordDraft'
+      responses:
+        '200':
+          description: Care record updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareRecordResponse'
+
+  /api/tasks:
+    get:
+      tags: [Tasks]
+      summary: List tasks
+      parameters:
+        - in: query
+          name: patientId
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/CareTaskStatus'
+        - in: query
+          name: repeatRule
+          schema:
+            $ref: '#/components/schemas/CareTaskRepeatRule'
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+      responses:
+        '200':
+          description: Task list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+
+    post:
+      tags: [Tasks]
+      summary: Create task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CareTaskDraft'
+      responses:
+        '200':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareTaskResponse'
+
+  /api/tasks/{id}:
+    get:
+      tags: [Tasks]
+      summary: Get task detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareTaskResponse'
+
+    put:
+      tags: [Tasks]
+      summary: Update task
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CareTaskDraft'
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareTaskResponse'
+
+  /api/tasks/{id}/complete:
+    post:
+      tags: [Tasks]
+      summary: Mark task as completed
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareTaskResponse'
+
+  /api/patients/{id}/metrics/trend:
+    get:
+      tags: [Trends]
+      summary: Get trend series for one metric
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: metricType
+          required: true
+          schema:
+            $ref: '#/components/schemas/TrendMetricType'
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Trend series
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendSeriesResponse'
+
+components:
+  schemas:
+    BasicSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+      required: [success, message]
+
+    AuthTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        token:
+          type: string
+        refreshToken:
+          type: string
+      required: [success, token]
+
+    CurrentUser:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+      required: [id, username, email]
+
+    CurrentUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/CurrentUser'
+      required: [success, data]
+
+    SendCodeRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required: [email]
+
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        emailVerificationCode:
+          type: string
+        password:
+          type: string
+        confirmPassword:
+          type: string
+      required:
+        [username, email, emailVerificationCode, password, confirmPassword]
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+
+    PatientGender:
+      type: string
+      enum: [男, 女, 其他]
+
+    Patient:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        age:
+          type: integer
+        gender:
+          $ref: '#/components/schemas/PatientGender'
+        profileNote:
+          type: string
+      required: [id, userId, name, age, gender, profileNote]
+
+    PatientCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+        gender:
+          $ref: '#/components/schemas/PatientGender'
+        profileNote:
+          type: string
+      required: [name, age, gender, profileNote]
+
+    PatientUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/PatientCreateRequest'
+
+    PatientResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/Patient'
+      required: [success, data]
+
+    PatientListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Patient'
+            page:
+              type: integer
+            pageSize:
+              type: integer
+            total:
+              type: integer
+          required: [items, page, pageSize, total]
+      required: [success, data]
+
+    HomeSummary:
+      type: object
+      properties:
+        pendingTaskCount:
+          type: integer
+        completedTaskCount:
+          type: integer
+        healthAlertCount:
+          type: integer
+        taskReminderCount:
+          type: integer
+      required:
+        [pendingTaskCount, completedTaskCount, healthAlertCount, taskReminderCount]
+
+    HomeHealthAlert:
+      type: object
+      properties:
+        id:
+          type: string
+        patientId:
+          type: string
+        patientName:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [warning, info]
+        occurredAt:
+          type: string
+          format: date-time
+      required: [id, patientId, patientName, message, severity, occurredAt]
+
+    HomeTaskItem:
+      type: object
+      properties:
+        id:
+          type: string
+        patientId:
+          type: string
+        patientName:
+          type: string
+        title:
+          type: string
+        remindTime:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/CareTaskStatus'
+        priority:
+          $ref: '#/components/schemas/CareTaskPriority'
+      required: [id, patientId, patientName, title, remindTime, status, priority]
+
+    RecentPatientCard:
+      type: object
+      properties:
+        patientId:
+          type: string
+        name:
+          type: string
+        age:
+          type: integer
+        conditionSummary:
+          type: string
+        status:
+          type: string
+          enum: [attention, stable, improving]
+        lastActivityAt:
+          type: string
+          format: date-time
+      required: [patientId, name, age, conditionSummary, status, lastActivityAt]
+
+    HomePageData:
+      type: object
+      properties:
+        summary:
+          $ref: '#/components/schemas/HomeSummary'
+        healthAlerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/HomeHealthAlert'
+        taskItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/HomeTaskItem'
+        recentPatients:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentPatientCard'
+      required: [summary, healthAlerts, taskItems, recentPatients]
+
+    HomePageDataResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/HomePageData'
+      required: [success, data]
+
+    RecordType:
+      type: string
+      enum:
+        - blood_pressure
+        - temperature
+        - blood_sugar
+        - heart_rate
+        - medication
+        - diet
+        - other
+
+    CareRecordSource:
+      type: string
+      enum: [manual, ai]
+
+    CareMetric:
+      type: object
+      properties:
+        key:
+          type: string
+          enum:
+            - bloodPressureSystolic
+            - bloodPressureDiastolic
+            - temperature
+            - bloodSugar
+            - heartRate
+            - medicationName
+            - medicationDose
+            - dietDescription
+            - observationText
+        value:
+          oneOf:
+            - type: number
+            - type: string
+        unit:
+          type: string
+      required: [key, value]
+
+    CareRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        patientId:
+          type: string
+        recordType:
+          $ref: '#/components/schemas/RecordType'
+        occurredAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+        source:
+          $ref: '#/components/schemas/CareRecordSource'
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/CareMetric'
+      required: [id, patientId, recordType, occurredAt, notes, source, metrics]
+
+    CareMetricDraft:
+      type: object
+      properties:
+        bloodPressureSystolic:
+          type: string
+        bloodPressureDiastolic:
+          type: string
+        temperature:
+          type: string
+        bloodSugar:
+          type: string
+        heartRate:
+          type: string
+        medicationName:
+          type: string
+        medicationDose:
+          type: string
+        dietDescription:
+          type: string
+        observationText:
+          type: string
+      required:
+        - bloodPressureSystolic
+        - bloodPressureDiastolic
+        - temperature
+        - bloodSugar
+        - heartRate
+        - medicationName
+        - medicationDose
+        - dietDescription
+        - observationText
+
+    CareRecordDraft:
+      type: object
+      properties:
+        patientId:
+          type: string
+        recordType:
+          $ref: '#/components/schemas/RecordType'
+        occurredAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+        metrics:
+          $ref: '#/components/schemas/CareMetricDraft'
+      required: [patientId, recordType, occurredAt, notes, metrics]
+
+    CareRecordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/CareRecord'
+      required: [success, data]
+
+    CareRecordListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/CareRecord'
+            page:
+              type: integer
+            pageSize:
+              type: integer
+            total:
+              type: integer
+          required: [items, page, pageSize, total]
+      required: [success, data]
+
+    CareTaskType:
+      type: string
+      enum:
+        - blood_pressure
+        - blood_sugar
+        - medication
+        - diet
+        - rehab
+        - appointment
+        - nutrition
+        - other
+
+    CareTaskRepeatRule:
+      type: string
+      enum: [once, daily, weekly, monthly]
+
+    CareTaskPriority:
+      type: string
+      enum: [low, normal, high]
+
+    CareTaskStatus:
+      type: string
+      enum: [pending, completed, scheduled]
+
+    CareTask:
+      type: object
+      properties:
+        id:
+          type: string
+        patientId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        taskType:
+          $ref: '#/components/schemas/CareTaskType'
+        remindTime:
+          type: string
+          format: date-time
+        repeatRule:
+          $ref: '#/components/schemas/CareTaskRepeatRule'
+        priority:
+          $ref: '#/components/schemas/CareTaskPriority'
+        remindOffsetMinutes:
+          type: integer
+        status:
+          $ref: '#/components/schemas/CareTaskStatus'
+      required:
+        - id
+        - patientId
+        - title
+        - description
+        - taskType
+        - remindTime
+        - repeatRule
+        - priority
+        - remindOffsetMinutes
+        - status
+
+    CareTaskDraft:
+      type: object
+      properties:
+        patientId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        taskType:
+          $ref: '#/components/schemas/CareTaskType'
+        remindTime:
+          type: string
+          format: date-time
+        repeatRule:
+          $ref: '#/components/schemas/CareTaskRepeatRule'
+        priority:
+          $ref: '#/components/schemas/CareTaskPriority'
+        remindOffsetMinutes:
+          type: integer
+      required:
+        - patientId
+        - title
+        - description
+        - taskType
+        - remindTime
+        - repeatRule
+        - priority
+        - remindOffsetMinutes
+
+    TaskListItem:
+      allOf:
+        - $ref: '#/components/schemas/CareTask'
+        - type: object
+          properties:
+            patientName:
+              type: string
+            isOverdue:
+              type: boolean
+          required: [patientName, isOverdue]
+
+    TaskListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TaskListItem'
+            page:
+              type: integer
+            pageSize:
+              type: integer
+            total:
+              type: integer
+          required: [items, page, pageSize, total]
+      required: [success, data]
+
+    CareTaskResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/CareTask'
+      required: [success, data]
+
+    PatientOverviewStats:
+      type: object
+      properties:
+        recordCount:
+          type: integer
+        pendingTaskCount:
+          type: integer
+        trendWindowDays:
+          type: integer
+      required: [recordCount, pendingTaskCount, trendWindowDays]
+
+    PatientRecentRecordItem:
+      type: object
+      properties:
+        id:
+          type: string
+        recordType:
+          $ref: '#/components/schemas/RecordType'
+        occurredAt:
+          type: string
+          format: date-time
+        source:
+          $ref: '#/components/schemas/CareRecordSource'
+        isConfirmed:
+          type: boolean
+        valueText:
+          type: string
+      required: [id, recordType, occurredAt, source, isConfirmed, valueText]
+
+    PatientUpcomingTaskItem:
+      allOf:
+        - $ref: '#/components/schemas/TaskListItem'
+
+    TrendMetricType:
+      type: string
+      enum:
+        - blood_pressure_systolic
+        - blood_pressure_diastolic
+        - blood_sugar
+        - temperature
+        - heart_rate
+
+    TrendSeriesPoint:
+      type: object
+      properties:
+        occurredAt:
+          type: string
+          format: date-time
+        value:
+          type: number
+      required: [occurredAt, value]
+
+    PatientTrendPreview:
+      type: object
+      properties:
+        metricKey:
+          type: string
+          enum: [blood_pressure]
+        chartData:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              systolic:
+                type: number
+              diastolic:
+                type: number
+            required: [date, systolic, diastolic]
+        averageSystolic:
+          type: number
+        averageDiastolic:
+          type: number
+        changePercent:
+          type: number
+      required:
+        [metricKey, chartData, averageSystolic, averageDiastolic, changePercent]
+
+    PatientDashboard:
+      type: object
+      properties:
+        patient:
+          $ref: '#/components/schemas/Patient'
+        conditionSummary:
+          type: string
+        overview:
+          $ref: '#/components/schemas/PatientOverviewStats'
+        recentRecords:
+          type: array
+          items:
+            $ref: '#/components/schemas/PatientRecentRecordItem'
+        upcomingTasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/PatientUpcomingTaskItem'
+        trendPreview:
+          $ref: '#/components/schemas/PatientTrendPreview'
+      required:
+        [patient, conditionSummary, overview, recentRecords, upcomingTasks, trendPreview]
+
+    PatientDashboardResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: '#/components/schemas/PatientDashboard'
+      required: [success, data]
+
+    TrendSeriesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            patientId:
+              type: string
+            metricType:
+              $ref: '#/components/schemas/TrendMetricType'
+            points:
+              type: array
+              items:
+                $ref: '#/components/schemas/TrendSeriesPoint'
+          required: [patientId, metricType, points]
+      required: [success, data]
