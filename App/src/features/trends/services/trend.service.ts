@@ -33,6 +33,11 @@ export interface BloodPressureTrendSeries {
   }>;
 }
 
+export interface TrendRangeQuery {
+  startAt?: string;
+  endAt?: string;
+}
+
 function mapMetricSeries(
   patientId: string,
   metric: TrendMetric,
@@ -48,19 +53,26 @@ function mapMetricSeries(
   };
 }
 
-export async function getMetricTrendSeries(patientId: string, metric: TrendMetric) {
+export async function getMetricTrendSeries(
+  patientId: string,
+  metric: TrendMetric,
+  range: TrendRangeQuery = {},
+) {
   const response = await apiClient.get<TrendSeriesResponse>(
     `/api/patients/${patientId}/metrics/trend`,
-    { metricType: metric },
+    { metricType: metric, startAt: range.startAt, endAt: range.endAt },
   );
 
   return mapMetricSeries(patientId, metric, response);
 }
 
-export async function getBloodPressureTrendSeries(patientId: string): Promise<BloodPressureTrendSeries> {
+export async function getBloodPressureTrendSeries(
+  patientId: string,
+  range: TrendRangeQuery = {},
+): Promise<BloodPressureTrendSeries> {
   const [systolicSeries, diastolicSeries] = await Promise.all([
-    getMetricTrendSeries(patientId, "bloodPressureSystolic"),
-    getMetricTrendSeries(patientId, "bloodPressureDiastolic"),
+    getMetricTrendSeries(patientId, "bloodPressureSystolic", range),
+    getMetricTrendSeries(patientId, "bloodPressureDiastolic", range),
   ]);
   const pointMap = new Map<string, BloodPressureTrendSeries["points"][number]>();
 

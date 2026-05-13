@@ -16,6 +16,10 @@ export function HealthTrendPage() {
     setMetric,
     timeRange,
     setTimeRange,
+    customStartDate,
+    customEndDate,
+    setCustomStartDate,
+    setCustomEndDate,
     bloodPressurePoints,
     singleMetricPoints,
     unit,
@@ -47,6 +51,15 @@ export function HealthTrendPage() {
           : "心率趋势";
 
   const hasData = metric === "blood_pressure" ? bloodPressurePoints.length > 0 : singleMetricPoints.length > 0;
+  const customRangeReady = timeRange !== "custom" || Boolean(customStartDate && customEndDate);
+  const rangeLabel =
+    timeRange === "week"
+      ? "近7天"
+      : timeRange === "month"
+        ? "近30天"
+        : customRangeReady
+          ? `${customStartDate} 至 ${customEndDate}`
+          : "请选择日期";
 
   return (
     <div className="min-h-screen bg-background">
@@ -104,11 +117,38 @@ export function HealthTrendPage() {
           </div>
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Calendar className="w-4 h-4" />
-            <span className="text-xs">
-              {timeRange === "week" ? "近7天" : timeRange === "month" ? "近30天" : "自定义"}
-            </span>
+            <span className="text-xs">{rangeLabel}</span>
           </div>
         </div>
+
+        {timeRange === "custom" ? (
+          <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4">
+            <label className="text-xs text-muted-foreground">
+              开始日期
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(event) => setCustomStartDate(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-transparent bg-input-background px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
+              />
+            </label>
+            <label className="text-xs text-muted-foreground">
+              结束日期
+              <input
+                type="date"
+                value={customEndDate}
+                min={customStartDate || undefined}
+                onChange={(event) => setCustomEndDate(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-transparent bg-input-background px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
+              />
+            </label>
+            {!customRangeReady ? (
+              <p className="col-span-2 text-xs text-accent">
+                请选择开始和结束日期后再加载自定义趋势。
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="bg-card rounded-2xl p-5 border border-border">
           <div className="flex items-center justify-between mb-4">
@@ -123,6 +163,10 @@ export function HealthTrendPage() {
             ) : error ? (
               <div className="flex h-full items-center justify-center text-sm text-accent">
                 {error}
+              </div>
+            ) : !customRangeReady ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                请选择自定义日期范围
               </div>
             ) : hasData ? (
               <ResponsiveContainer width="100%" height="100%">

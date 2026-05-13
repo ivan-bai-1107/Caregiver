@@ -1,6 +1,6 @@
 # Backend
 
-FastAPI 后端服务，提供 Auth、Users/Profile、Home、Patients、Care Records、Tasks、Trends、Profile、AI Assistant、Knowledge 主业务接口。
+FastAPI 后端服务，提供 Auth、Users/Profile、Home、Patients、Care Records、Tasks、Trends、Profile、AI Assistant、Knowledge、Community、Admin、Care Workbench 主业务接口。
 
 ## 环境准备
 
@@ -62,10 +62,17 @@ Seed 账号：
 - 邮箱：`caregiver@example.com`
 - 密码：`password123`
 
+Admin seed 账号：
+
+- 邮箱：`admin@example.com`
+- 密码：`admin123`
+
 Seed 数据还包括：
 
 - 知识分类：慢病管理、饮食护理、康复训练、常见症状处理
 - 知识文章：高血压、糖尿病、营养、压疮预防、康复训练、发热观察等演示内容
+- 社区帖子：经验分享、工具分享、待审核问题
+- 社区评论：已通过评论和待审核评论
 
 ## 启动服务
 
@@ -91,6 +98,53 @@ uvicorn app.main:app --reload
 - `POST /api/knowledge/articles/{id}/like`
 - `POST /api/knowledge/articles/{id}/bookmark`
 - `DELETE /api/knowledge/articles/{id}/bookmark`
+
+## Community API
+
+- `GET /api/community/posts?q=&tag=&page=&pageSize=`
+- `GET /api/community/posts/{id}`
+- `POST /api/community/posts`
+- `GET /api/community/posts/{id}/comments`
+- `POST /api/community/posts/{id}/comments`
+- `POST /api/community/posts/{id}/like`
+- `POST /api/community/posts/{id}/bookmark`
+- `DELETE /api/community/posts/{id}/bookmark`
+- `POST /api/community/posts/{id}/report`
+- `GET /api/community/posts/{id}/related`
+- `GET /api/community/users/{authorId}/posts`
+
+社区状态统一为：
+
+- `pending`
+- `passed`
+- `rejected`
+
+## Admin API
+
+- `POST /api/admin/auth/login`
+- `GET /api/admin/me`
+- `GET /api/admin/dashboard/summary`
+- `GET /api/admin/users?page=&pageSize=&keyword=`
+- `GET /api/admin/users/{id}`
+- `PUT /api/admin/users/{id}/status`
+- `GET /api/admin/reviews/posts?status=&page=&pageSize=`
+- `PUT /api/admin/reviews/posts/{id}`
+- `GET /api/admin/reviews/comments?status=&page=&pageSize=`
+- `PUT /api/admin/reviews/comments/{id}`
+- `GET /api/admin/knowledge/articles?page=&pageSize=&status=`
+- `POST /api/admin/knowledge/articles`
+- `PUT /api/admin/knowledge/articles/{id}`
+- `PUT /api/admin/knowledge/articles/{id}/status`
+- `GET /api/admin/ai-logs?page=&pageSize=&intent=`
+- `GET /api/admin/ai-logs/{id}`
+
+后台登录独立于前台用户登录。Prompt 管理页当前为预留模块，不提供假编辑能力。
+
+## Care Workbench API
+
+- `GET /api/care/workbench`
+
+返回照护工作台聚合数据：summary、patients、recentRecords、upcomingTasks。
 
 ## AI Provider
 
@@ -134,4 +188,11 @@ python scripts/api_smoke_test.py
 smoke test passed
 ```
 
-Smoke test 覆盖主闭环、AI fallback，以及 Knowledge 分类、列表、详情、相关推荐、浏览、点赞、收藏和取消收藏。
+Smoke test 覆盖：
+
+- 主闭环：登录、患者、护理记录、指标趋势、任务创建与完成
+- AI fallback：QA、record draft、task draft
+- Knowledge：分类、列表、详情、相关推荐、浏览、点赞、收藏和取消收藏
+- Community：发帖、列表、详情、评论、点赞、收藏、举报
+- Admin：登录、Dashboard、用户列表、待审核帖子、审核帖子、知识文章列表、AI 日志列表
+- Care：workbench 聚合接口

@@ -4,6 +4,7 @@ import { getPatient } from "@/features/patients/services/patient.service";
 import {
   getBloodPressureTrendSeries,
   getMetricTrendSeries,
+  type TrendRangeQuery,
 } from "@/features/trends/services/trend.service";
 
 export type TrendPageMetric = "blood_pressure" | "blood_sugar" | "temperature" | "heart_rate";
@@ -35,11 +36,40 @@ function getMetricUnit(metric: TrendPageMetric) {
   }
 }
 
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function toRangeStart(value: string) {
+  return new Date(`${value}T00:00:00`).toISOString();
+}
+
+function toRangeEnd(value: string) {
+  return new Date(`${value}T23:59:59`).toISOString();
+}
+
+function getRelativeRange(days: number): TrendRangeQuery {
+  const end = new Date();
+  const start = new Date(end);
+  start.setDate(end.getDate() - days + 1);
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
+  return {
+    startAt: start.toISOString(),
+    endAt: end.toISOString(),
+  };
+}
+
 export function useHealthTrendState(patientId?: string) {
   const [patientName, setPatientName] = useState("患者");
   const [patientMeta, setPatientMeta] = useState("");
   const [metric, setMetric] = useState<TrendPageMetric>("blood_pressure");
   const [timeRange, setTimeRange] = useState<TrendTimeRange>("week");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
   const [bloodPressurePoints, setBloodPressurePoints] = useState<
     Array<{ date: string; systolic?: number; diastolic?: number }>
   >([]);
@@ -86,18 +116,38 @@ export function useHealthTrendState(patientId?: string) {
     let isMounted = true;
 
     async function loadTrend() {
+      const isCustomRangeReady = timeRange !== "custom" || Boolean(customStartDate && customEndDate);
+
+      if (!isCustomRangeReady) {
+        setBloodPressurePoints([]);
+        setSingleMetricPoints([]);
+        setIsLoading(false);
+        setError(null);
+        return;
+      }
+
+      const range =
+        timeRange === "week"
+          ? getRelativeRange(7)
+          : timeRange === "month"
+            ? getRelativeRange(30)
+            : {
+                startAt: toRangeStart(customStartDate),
+                endAt: toRangeEnd(customEndDate),
+              };
+
       setIsLoading(true);
       setError(null);
 
       try {
         if (metric === "blood_pressure") {
-          const response = await getBloodPressureTrendSeries(patientId);
+          const response = await getBloodPressureTrendSeries(patientId, range);
           if (isMounted) {
             setBloodPressurePoints(response.points);
             setSingleMetricPoints([]);
           }
         } else {
-          const response = await getMetricTrendSeries(patientId, toTrendMetric(metric));
+          const response = await getMetricTrendSeries(patientId, toTrendMetric(metric), range);
           if (isMounted) {
             setSingleMetricPoints(response.points);
             setBloodPressurePoints([]);
@@ -121,7 +171,7 @@ export function useHealthTrendState(patientId?: string) {
     return () => {
       isMounted = false;
     };
-  }, [metric, patientId, timeRange]);
+  }, [customEndDate, customStartDate, metric, patientId, timeRange]);
 
   const trendStats = useMemo(() => {
     if (metric === "blood_pressure") {
@@ -166,6 +216,11 @@ export function useHealthTrendState(patientId?: string) {
     setMetric,
     timeRange,
     setTimeRange,
+    customStartDate,
+    customEndDate,
+    setCustomStartDate,
+    setCustomEndDate,
+    suggestedCustomEndDate: toDateInputValue(new Date()),
     bloodPressurePoints,
     singleMetricPoints,
     unit: getMetricUnit(metric),

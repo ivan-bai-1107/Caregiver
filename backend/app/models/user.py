@@ -14,6 +14,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(80), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="active", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -38,6 +39,11 @@ class User(Base):
     ai_logs = relationship("AiAssistantLog", back_populates="user", cascade="all, delete-orphan")
     knowledge_likes = relationship("UserKnowledgeLike", back_populates="user", cascade="all, delete-orphan")
     knowledge_bookmarks = relationship("UserKnowledgeBookmark", back_populates="user", cascade="all, delete-orphan")
+    community_posts = relationship("CommunityPost", back_populates="author", cascade="all, delete-orphan")
+    community_comments = relationship("CommunityComment", back_populates="author", cascade="all, delete-orphan")
+    community_likes = relationship("CommunityPostLike", back_populates="user", cascade="all, delete-orphan")
+    community_bookmarks = relationship("CommunityPostBookmark", back_populates="user", cascade="all, delete-orphan")
+    community_reports = relationship("CommunityPostReport", back_populates="user", cascade="all, delete-orphan")
 
 
 class EmailVerificationCode(Base):

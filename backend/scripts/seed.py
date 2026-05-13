@@ -10,9 +10,11 @@ from sqlalchemy import select
 
 from app.core.database import SessionLocal
 from app.core.security import hash_password
+from app.models.admin import AdminUser
 from app.models.care_metric import CareMetric
 from app.models.care_record import CareRecord
 from app.models.care_task import CareTask
+from app.models.community import CommunityComment, CommunityPost
 from app.models.knowledge import KnowledgeArticle, KnowledgeCategory
 from app.models.patient import Patient
 from app.models.user import User
@@ -22,6 +24,7 @@ from app.models.user_settings import UserNotificationSetting, UserPreference
 def get_or_create_user(db) -> User:
     user = db.scalar(select(User).where(User.email == "caregiver@example.com"))
     if user is not None:
+        user.status = "active"
         return user
 
     user = User(
@@ -34,6 +37,23 @@ def get_or_create_user(db) -> User:
     db.add(UserNotificationSetting(user_id=user.id))
     db.add(UserPreference(user_id=user.id))
     return user
+
+
+def get_or_create_admin(db) -> AdminUser:
+    admin = db.scalar(select(AdminUser).where(AdminUser.email == "admin@example.com"))
+    if admin is not None:
+        admin.status = "active"
+        return admin
+
+    admin = AdminUser(
+        username="系统管理员",
+        email="admin@example.com",
+        password_hash=hash_password("admin123"),
+        status="active",
+    )
+    db.add(admin)
+    db.flush()
+    return admin
 
 
 def get_or_create_patient(db, user: User, name: str, age: int, gender: str, note: str) -> Patient:
@@ -252,9 +272,66 @@ def add_knowledge_articles_if_empty(db) -> None:
         )
 
 
+def add_community_seed_if_empty(db, user: User) -> None:
+    existing_post = db.scalar(select(CommunityPost))
+    if existing_post is not None:
+        return
+
+    posts = [
+        CommunityPost(
+            author_id=user.id,
+            title="分享一个测血压的小技巧",
+            content="测血压前建议让患者安静休息至少5分钟，袖带位置和手臂高度都要尽量保持稳定。我在照护记录里会同时写下测量时间，便于后续看趋势。",
+            tag="experience",
+            status="passed",
+            like_count=24,
+            comment_count=1,
+        ),
+        CommunityPost(
+            author_id=user.id,
+            title="老年糖尿病患者的饮食记录表格",
+            content="我把每天三餐、加餐和血糖监测时间整理成一个表格，家属轮班时也能看懂当天情况。重点是记录要简单，避免大家坚持不下来。",
+            tag="tools",
+            status="passed",
+            like_count=36,
+            comment_count=1,
+        ),
+        CommunityPost(
+            author_id=user.id,
+            title="照顾卧床老人时如何预防压疮？",
+            content="最近家里老人卧床时间比较长，想请教大家翻身、皮肤观察和床垫选择方面有哪些经验。",
+            tag="question",
+            status="pending",
+            like_count=0,
+            comment_count=0,
+        ),
+    ]
+    for post in posts:
+        db.add(post)
+    db.flush()
+
+    db.add(
+        CommunityComment(
+            post_id=posts[0].id,
+            author_id=user.id,
+            content="非常实用。固定时间测量和连续记录确实能减少很多误判。",
+            status="passed",
+        )
+    )
+    db.add(
+        CommunityComment(
+            post_id=posts[1].id,
+            author_id=user.id,
+            content="这个表格思路很好，我也准备给家里人做一版。",
+            status="pending",
+        )
+    )
+
+
 def main() -> None:
     with SessionLocal() as db:
         user = get_or_create_user(db)
+        get_or_create_admin(db)
         zhang_ming = get_or_create_patient(
             db,
             user,
@@ -274,10 +351,13 @@ def main() -> None:
         add_record_if_empty(db, zhang_ming)
         add_task_if_empty(db, zhang_ming)
         add_knowledge_articles_if_empty(db)
+        add_community_seed_if_empty(db, user)
         db.commit()
         print("Seed completed.")
         print("Login email: caregiver@example.com")
         print("Password: password123")
+        print("Admin email: admin@example.com")
+        print("Admin password: admin123")
 
 
 if __name__ == "__main__":

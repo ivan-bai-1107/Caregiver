@@ -11,6 +11,8 @@ import httpx
 BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 SEED_EMAIL = "caregiver@example.com"
 SEED_PASSWORD = "password123"
+ADMIN_EMAIL = "admin@example.com"
+ADMIN_PASSWORD = "admin123"
 
 
 def unwrap(response: httpx.Response) -> Any:
@@ -114,6 +116,111 @@ def assert_knowledge_flow(client: httpx.Client) -> None:
     assert_true(removed.get("isBookmarked") is False, "knowledge bookmark delete should clear bookmark")
 
 
+def assert_community_flow(client: httpx.Client, suffix: str) -> str:
+    created = unwrap(
+        client.post(
+            "/api/community/posts",
+            json={
+                "title": f"冒烟测试社区帖子{suffix}",
+                "content": "这是 API smoke test 创建的社区帖子，应该进入 pending 审核状态。",
+                "tag": "experience",
+            },
+        )
+    )
+    post_id = created.get("id")
+    assert_true(isinstance(post_id, str) and post_id, "community post id missing")
+    assert_true(created.get("status") == "pending", "created community post should be pending")
+
+    posts_page = unwrap(client.get("/api/community/posts", params={"q": "冒烟测试", "page": 1, "pageSize": 10}))
+    assert_true(
+        any(item.get("id") == post_id for item in posts_page.get("items", [])),
+        "community list should include user's pending post",
+    )
+
+    detail = unwrap(client.get(f"/api/community/posts/{post_id}"))
+    assert_true(detail.get("id") == post_id, "community detail returned unexpected post")
+
+    comment = unwrap(
+        client.post(
+            f"/api/community/posts/{post_id}/comments",
+            json={"content": "这是 API smoke test 创建的评论。"},
+        )
+    )
+    assert_true(comment.get("status") == "pending", "created community comment should be pending")
+
+    comments = unwrap(client.get(f"/api/community/posts/{post_id}/comments"))
+    assert_true(any(item.get("id") == comment.get("id") for item in comments), "comments should include own pending comment")
+
+    liked = unwrap(client.post(f"/api/community/posts/{post_id}/like", json={}))
+    assert_true(liked.get("isLiked") is True, "community like should mark post as liked")
+
+    bookmarked = unwrap(client.post(f"/api/community/posts/{post_id}/bookmark", json={}))
+    assert_true(bookmarked.get("isBookmarked") is True, "community bookmark should mark post as bookmarked")
+
+    removed = unwrap(client.delete(f"/api/community/posts/{post_id}/bookmark"))
+    assert_true(removed.get("isBookmarked") is False, "community bookmark delete should clear bookmark")
+
+    reported = unwrap(client.post(f"/api/community/posts/{post_id}/report", json={"reason": "smoke test report"}))
+    assert_true(isinstance(reported.get("reportCount"), int), "community reportCount should be integer")
+
+    related = unwrap(client.get(f"/api/community/posts/{post_id}/related"))
+    assert_true(isinstance(related, list), "community related posts must be a list")
+
+    author_posts = unwrap(client.get(f"/api/community/users/{detail['author']['id']}/posts"))
+    assert_true(isinstance(author_posts, list), "community author posts must be a list")
+
+    return post_id
+
+
+def assert_admin_flow(base_url: str, pending_post_id: str) -> None:
+    with httpx.Client(base_url=base_url, timeout=10.0) as admin_client:
+        login = unwrap(
+            admin_client.post(
+                "/api/admin/auth/login",
+                json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+            )
+        )
+        token = login.get("token") if isinstance(login, dict) else None
+        assert_true(isinstance(token, str) and len(token) > 10, "admin login did not return token")
+        admin_client.headers.update({"Authorization": f"Bearer {token}"})
+
+        me = unwrap(admin_client.get("/api/admin/me"))
+        assert_true(me.get("email") == ADMIN_EMAIL, "admin me returned unexpected email")
+
+        summary = unwrap(admin_client.get("/api/admin/dashboard/summary"))
+        assert_true(isinstance(summary.get("userCount"), int), "admin dashboard userCount missing")
+
+        users = unwrap(admin_client.get("/api/admin/users", params={"page": 1, "pageSize": 10}))
+        assert_true(isinstance(users.get("items"), list), "admin users list missing")
+
+        review_posts = unwrap(
+            admin_client.get("/api/admin/reviews/posts", params={"status": "pending", "page": 1, "pageSize": 20})
+        )
+        assert_true(
+            any(item.get("id") == pending_post_id for item in review_posts.get("items", [])),
+            "admin review posts should include pending smoke post",
+        )
+
+        reviewed = unwrap(
+            admin_client.put(
+                f"/api/admin/reviews/posts/{pending_post_id}",
+                json={"status": "passed", "reason": "smoke test approve"},
+            )
+        )
+        assert_true(reviewed.get("status") == "passed", "admin post review should set status passed")
+
+        comments = unwrap(
+            admin_client.get("/api/admin/reviews/comments", params={"status": "pending", "page": 1, "pageSize": 10})
+        )
+        assert_true(isinstance(comments.get("items"), list), "admin review comments list missing")
+
+        articles = unwrap(admin_client.get("/api/admin/knowledge/articles", params={"page": 1, "pageSize": 10}))
+        assert_true(isinstance(articles.get("items"), list) and articles["items"], "admin knowledge articles list missing")
+
+        ai_logs = unwrap(admin_client.get("/api/admin/ai-logs", params={"page": 1, "pageSize": 10}))
+        assert_true(isinstance(ai_logs.get("items"), list), "admin ai logs list missing")
+
+
 def main() -> None:
     now = datetime.now(timezone.utc)
     unique_suffix = now.strftime("%Y%m%d%H%M%S")
@@ -197,7 +304,11 @@ def main() -> None:
         trend = unwrap(
             client.get(
                 f"/api/patients/{patient_id}/metrics/trend",
-                params={"metricType": "blood_pressure_systolic"},
+                params={
+                    "metricType": "blood_pressure_systolic",
+                    "startAt": (now - timedelta(hours=1)).isoformat(),
+                    "endAt": (now + timedelta(hours=1)).isoformat(),
+                },
             )
         )
         assert_true(
@@ -245,6 +356,11 @@ def main() -> None:
         assert_true(completed_task.get("status") == "completed", "task completion did not set status=completed")
 
         assert_knowledge_flow(client)
+        pending_post_id = assert_community_flow(client, unique_suffix)
+
+        workbench = unwrap(client.get("/api/care/workbench"))
+        assert_true(isinstance(workbench.get("summary"), dict), "care workbench summary missing")
+        assert_true(isinstance(workbench.get("patients"), list), "care workbench patients missing")
 
         qa_response = unwrap(
             client.post(
@@ -279,6 +395,8 @@ def main() -> None:
             )
         )
         assert_task_draft(task_draft_response, patient_id)
+
+    assert_admin_flow(BASE_URL, pending_post_id)
 
     print("smoke test passed")
 

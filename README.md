@@ -11,6 +11,9 @@
 
 - Auth / Users / Home / Patients / Records / Tasks / Trends / Profile / AI Assistant
 - Knowledge：分类、文章列表、搜索、详情、相关推荐、浏览、点赞、收藏
+- Community：帖子、评论、点赞、收藏、举报、相关推荐、作者帖子
+- Admin：独立管理员登录、Dashboard、用户状态、社区审核、知识内容、AI 日志
+- Care Workbench：`/api/care/workbench` 聚合患者、记录、待办任务
 
 ## 前端启动
 
@@ -91,7 +94,12 @@ Seed 账号：
 - 邮箱：`caregiver@example.com`
 - 密码：`password123`
 
-Seed 还会写入知识分类和知识文章，用于 Knowledge 模块演示。
+Admin seed 账号：
+
+- 邮箱：`admin@example.com`
+- 密码：`admin123`
+
+Seed 还会写入知识分类、知识文章、社区帖子和评论，用于可演示联调。
 
 ## 前端切真实后端
 
@@ -134,3 +142,47 @@ python scripts/api_smoke_test.py
 ```
 
 Smoke test 覆盖主闭环、AI fallback 场景，以及 Knowledge 分类 / 列表 / 详情 / 点赞 / 收藏。
+
+当前 smoke test 范围：
+
+- 用户登录、患者、记录、趋势、任务完成、AI qa/record/task draft
+- Knowledge 列表、详情、浏览、点赞、收藏
+- Community 发帖、列表、详情、评论、点赞、收藏、举报
+- Admin 登录、Dashboard、用户列表、帖子审核、知识文章列表、AI 日志列表
+- Care Workbench 聚合接口
+
+## 新增模块 API 概览
+
+Community：
+
+- `GET /api/community/posts`
+- `GET /api/community/posts/{id}`
+- `POST /api/community/posts`
+- `GET /api/community/posts/{id}/comments`
+- `POST /api/community/posts/{id}/comments`
+- `POST /api/community/posts/{id}/like`
+- `POST /api/community/posts/{id}/bookmark`
+- `DELETE /api/community/posts/{id}/bookmark`
+- `POST /api/community/posts/{id}/report`
+
+Admin：
+
+- `POST /api/admin/auth/login`
+- `GET /api/admin/dashboard/summary`
+- `GET /api/admin/users`
+- `PUT /api/admin/users/{id}/status`
+- `GET /api/admin/reviews/posts`
+- `PUT /api/admin/reviews/posts/{id}`
+- `GET /api/admin/reviews/comments`
+- `PUT /api/admin/reviews/comments/{id}`
+- `GET /api/admin/knowledge/articles`
+- `POST /api/admin/knowledge/articles`
+- `PUT /api/admin/knowledge/articles/{id}`
+- `PUT /api/admin/knowledge/articles/{id}/status`
+- `GET /api/admin/ai-logs`
+
+Care：
+
+- `GET /api/care/workbench`
+
+`/admin/prompts` 当前是预留模块：AI 使用后端内置安全 Prompt 与 DeepSeek provider，暂不提供可编辑但不生效的 Prompt 列表。
