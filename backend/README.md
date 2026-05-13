@@ -17,6 +17,9 @@ pip install -r requirements.txt
 
 ```env
 DATABASE_URL=postgresql+psycopg://caregiver:caregiver123@127.0.0.1:5432/caregiver_system
+REDIS_URL=redis://127.0.0.1:6379/0
+REDIS_ENABLED=true
+EMAIL_CODE_TTL_SECONDS=600
 JWT_SECRET_KEY=please-change-this-for-local-development
 AI_PROVIDER=deepseek
 AI_USE_REAL_MODEL=true
@@ -34,6 +37,37 @@ docker run --name caregiver_postgres `
   -e POSTGRES_DB=caregiver_system `
   -p 5432:5432 `
   -d postgres:16
+```
+
+## Docker Redis
+
+Redis 当前用于邮箱验证码短期缓存，TTL 默认 600 秒。验证码仍会写入数据库作为 fallback，因此 Redis 宕机不会让注册链路直接失败。
+
+单独创建 Redis：
+
+```powershell
+docker run --name caregiver_redis `
+  -p 6379:6379 `
+  -v caregiver_redis_data:/data `
+  -d redis:7-alpine redis-server --appendonly yes
+```
+
+或使用仓库根目录的 Compose 文件：
+
+```powershell
+docker compose up -d redis
+```
+
+同时创建 PostgreSQL 和 Redis：
+
+```powershell
+docker compose up -d
+```
+
+检查 Redis：
+
+```powershell
+docker exec caregiver_redis redis-cli ping
 ```
 
 ## 数据库迁移
@@ -87,6 +121,8 @@ uvicorn app.main:app --reload
 - FastAPI Docs: http://127.0.0.1:8000/docs
 - OpenAPI JSON: http://127.0.0.1:8000/openapi.json
 - Health Check: http://127.0.0.1:8000/health
+
+`/health` 会附带 Redis 状态：`redis: ok` 或 `redis: unavailable`。
 
 ## Knowledge API
 
@@ -191,6 +227,7 @@ smoke test passed
 Smoke test 覆盖：
 
 - 主闭环：登录、患者、护理记录、指标趋势、任务创建与完成
+- Auth：验证码发送与注册，Redis 可用时校验验证码缓存和注册后清理
 - AI fallback：QA、record draft、task draft
 - Knowledge：分类、列表、详情、相关推荐、浏览、点赞、收藏和取消收藏
 - Community：发帖、列表、详情、评论、点赞、收藏、举报

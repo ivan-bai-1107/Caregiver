@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes import admin, ai, auth, care, community, home, knowledge, patients, records, tasks, trends, users
 from app.core.config import get_settings
+from app.core.redis import redis_is_available
 
 settings = get_settings()
 
@@ -40,7 +41,7 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError) 
 
 @app.get("/health")
 def health_check() -> dict[str, object]:
-    return {"success": True, "data": {"status": "ok"}}
+    return {"success": True, "data": {"status": "ok", "redis": "ok" if redis_is_available() else "unavailable"}}
 
 
 app.include_router(auth.router, prefix=settings.api_prefix)

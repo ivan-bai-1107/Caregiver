@@ -43,12 +43,17 @@ uvicorn app.main:app --reload
 - FastAPI Docs: http://127.0.0.1:8000/docs
 - Health Check: http://127.0.0.1:8000/health
 
+`/health` 会返回 Redis 状态，例如 `redis: ok` 或 `redis: unavailable`。
+
 ## Docker PostgreSQL
 
 本地 `.env` 中配置：
 
 ```env
 DATABASE_URL=postgresql+psycopg://caregiver:caregiver123@127.0.0.1:5432/caregiver_system
+REDIS_URL=redis://127.0.0.1:6379/0
+REDIS_ENABLED=true
+EMAIL_CODE_TTL_SECONDS=600
 JWT_SECRET_KEY=please-change-this-for-local-development
 AI_PROVIDER=deepseek
 AI_USE_REAL_MODEL=true
@@ -66,6 +71,31 @@ docker run --name caregiver_postgres `
   -e POSTGRES_DB=caregiver_system `
   -p 5432:5432 `
   -d postgres:16
+```
+
+## Docker Redis
+
+Redis 当前用于邮箱验证码短期缓存，后续可以继续承载登录限流、提醒队列和热点数据缓存。验证码仍会写入数据库作为 fallback，所以 Redis 不可用时不会让注册主流程直接失败。
+
+单独创建 Redis：
+
+```powershell
+docker run --name caregiver_redis `
+  -p 6379:6379 `
+  -v caregiver_redis_data:/data `
+  -d redis:7-alpine redis-server --appendonly yes
+```
+
+也可以使用仓库根目录的 Compose 文件：
+
+```powershell
+docker compose up -d redis
+```
+
+如果 PostgreSQL 也要一起创建：
+
+```powershell
+docker compose up -d
 ```
 
 ## Alembic
@@ -146,6 +176,7 @@ Smoke test 覆盖主闭环、AI fallback 场景，以及 Knowledge 分类 / 列�
 当前 smoke test 范围：
 
 - 用户登录、患者、记录、趋势、任务完成、AI qa/record/task draft
+- Auth 验证码注册链路，Redis 可用时会校验验证码缓存与注册后清理
 - Knowledge 列表、详情、浏览、点赞、收藏
 - Community 发帖、列表、详情、评论、点赞、收藏、举报
 - Admin 登录、Dashboard、用户列表、帖子审核、知识文章列表、AI 日志列表

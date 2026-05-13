@@ -9,6 +9,7 @@ import httpx
 
 
 BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 SEED_EMAIL = "caregiver@example.com"
 SEED_PASSWORD = "password123"
 ADMIN_EMAIL = "admin@example.com"
@@ -39,6 +40,54 @@ def unwrap(response: httpx.Response) -> Any:
 def assert_true(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
+
+
+def get_redis_value(key: str) -> str | None:
+    try:
+        from redis import Redis
+        from redis.exceptions import RedisError
+
+        client = Redis.from_url(
+            REDIS_URL,
+            decode_responses=True,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
+        value = client.get(key)
+        return value if isinstance(value, str) else None
+    except (ImportError, RedisError, OSError):
+        return None
+
+
+def assert_registration_code_flow(base_url: str, suffix: str) -> None:
+    email = f"redis-smoke-{suffix}@example.com"
+    cache_key = f"email_code:{email}"
+
+    with httpx.Client(base_url=base_url, timeout=10.0) as auth_client:
+        code_data = unwrap(auth_client.post("/api/auth/email/send-code", json={"email": email}))
+        code = code_data.get("debugCode")
+        assert_true(isinstance(code, str) and len(code) == 6, "send-code did not return debug code")
+
+        cached_code = get_redis_value(cache_key)
+        if cached_code is not None:
+            assert_true(cached_code == code, "redis cached email code should match generated code")
+
+        register_data = unwrap(
+            auth_client.post(
+                "/api/auth/register",
+                json={
+                    "username": f"Redis冒烟用户{suffix}",
+                    "email": email,
+                    "password": "password123",
+                    "code": code,
+                },
+            )
+        )
+        token = register_data.get("token")
+        assert_true(isinstance(token, str) and len(token) > 10, "register did not return token")
+
+        if cached_code is not None:
+            assert_true(get_redis_value(cache_key) is None, "redis email code should be deleted after register")
 
 
 def assert_ai_base_shape(data: dict[str, Any], expected_intent: str, expected_draft_type: str | None) -> None:
@@ -225,6 +274,8 @@ def main() -> None:
     now = datetime.now(timezone.utc)
     unique_suffix = now.strftime("%Y%m%d%H%M%S")
     patient_name = f"冒烟测试患者{unique_suffix}"
+
+    assert_registration_code_flow(BASE_URL, unique_suffix)
 
     with httpx.Client(base_url=BASE_URL, timeout=10.0) as client:
         login_data = unwrap(

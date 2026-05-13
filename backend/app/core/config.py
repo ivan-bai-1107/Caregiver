@@ -26,6 +26,9 @@ class Settings(BaseSettings):
         validation_alias="DEEPSEEK_BASE_URL",
     )
     deepseek_model: str = Field(default="deepseek-v4-flash", validation_alias="DEEPSEEK_MODEL")
+    redis_url: str = Field(default="redis://127.0.0.1:6379/0", validation_alias="REDIS_URL")
+    redis_enabled: bool = Field(default=True, validation_alias="REDIS_ENABLED")
+    email_code_ttl_seconds: int = Field(default=600, validation_alias="EMAIL_CODE_TTL_SECONDS")
     cors_origins: list[str] = [
         "http://127.0.0.1:5173",
         "http://localhost:5173",
