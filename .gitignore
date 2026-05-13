@@ -6,3 +6,4 @@ App/node_modules/
 App/dist/
 App/.env
 App/.env.local
+.vscode/

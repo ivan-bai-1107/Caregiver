@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +18,14 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7
     refresh_token_expire_minutes: int = 60 * 24 * 30
+    ai_provider: str = Field(default="deepseek", validation_alias="AI_PROVIDER")
+    ai_use_real_model: bool = Field(default=True, validation_alias="AI_USE_REAL_MODEL")
+    deepseek_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="DEEPSEEK_API_KEY")
+    deepseek_base_url: str = Field(
+        default="https://api.deepseek.com",
+        validation_alias="DEEPSEEK_BASE_URL",
+    )
+    deepseek_model: str = Field(default="deepseek-v4-flash", validation_alias="DEEPSEEK_MODEL")
     cors_origins: list[str] = [
         "http://127.0.0.1:5173",
         "http://localhost:5173",

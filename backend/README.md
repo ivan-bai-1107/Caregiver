@@ -18,6 +18,11 @@ pip install -r requirements.txt
 ```env
 DATABASE_URL=postgresql+psycopg://caregiver:caregiver123@127.0.0.1:5432/caregiver_system
 JWT_SECRET_KEY=please-change-this-for-local-development
+AI_PROVIDER=deepseek
+AI_USE_REAL_MODEL=true
+DEEPSEEK_API_KEY=
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-v4-flash
 ```
 
 ## Docker PostgreSQL
@@ -70,6 +75,28 @@ uvicorn app.main:app --reload
 - FastAPI Docs: http://127.0.0.1:8000/docs
 - OpenAPI JSON: http://127.0.0.1:8000/openapi.json
 - Health Check: http://127.0.0.1:8000/health
+
+## AI Provider
+
+`POST /api/ai/assistant` 对前端保持统一接口，前端不直接接触 DeepSeek，也不保存任何 DeepSeek key。
+
+配置真实 DeepSeek：
+
+```env
+AI_PROVIDER=deepseek
+AI_USE_REAL_MODEL=true
+DEEPSEEK_API_KEY=your-deepseek-api-key
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-v4-flash
+```
+
+注意：
+
+- 不要提交 `backend/.env`，真实 API key 只能放本地环境变量。
+- `DEEPSEEK_API_KEY` 为空时会自动走规则型 fallback。
+- `AI_USE_REAL_MODEL=false` 时会强制走 fallback，适合自动化 smoke test。
+- DeepSeek 调用失败、超时、返回非 JSON 或结构校验失败时，会自动 fallback，不会让前端直接 500。
+- AI 生成护理记录或任务只返回草稿，必须由用户在确认页核对后再保存。
 
 ## API Smoke Test
 

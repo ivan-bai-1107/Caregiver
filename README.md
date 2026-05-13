@@ -42,6 +42,11 @@ uvicorn app.main:app --reload
 ```env
 DATABASE_URL=postgresql+psycopg://caregiver:caregiver123@127.0.0.1:5432/caregiver_system
 JWT_SECRET_KEY=please-change-this-for-local-development
+AI_PROVIDER=deepseek
+AI_USE_REAL_MODEL=true
+DEEPSEEK_API_KEY=
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-v4-flash
 ```
 
 如需创建本地 PostgreSQL 容器：
@@ -90,6 +95,20 @@ VITE_API_BASE_URL=http://127.0.0.1:8000
 ```
 
 修改后需要重启 `pnpm dev`。
+
+## AI 与 DeepSeek
+
+前端仍然只调用后端统一接口 `POST /api/ai/assistant`，不会接触 DeepSeek，也不能出现 DeepSeek API key。
+
+后端支持 DeepSeek provider + 规则型 fallback：
+
+- `DEEPSEEK_API_KEY` 为空时自动走 fallback。
+- `AI_USE_REAL_MODEL=false` 时强制走 fallback。
+- `DEEPSEEK_MODEL` 可在 `backend/.env` 中调整。
+- DeepSeek 不可用、超时、返回非严格 JSON 或结构校验失败时自动 fallback。
+- AI 生成的 record/task 只作为草稿返回，必须在前端确认页核对后才会保存。
+
+真实 key 只能放在 `backend/.env`，不要提交到代码、README、测试脚本或前端环境变量。
 
 ## API Smoke Test
 

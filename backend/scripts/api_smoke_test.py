@@ -39,6 +39,42 @@ def assert_true(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
+def assert_ai_base_shape(data: dict[str, Any], expected_intent: str, expected_draft_type: str | None) -> None:
+    assert_true(data.get("intent") == expected_intent, f"AI intent should be {expected_intent}")
+    assert_true(data.get("draftType") == expected_draft_type, f"AI draftType should be {expected_draft_type}")
+    assert_true(isinstance(data.get("conversationId"), str) and data["conversationId"], "AI conversationId missing")
+    assert_true(isinstance(data.get("answerText"), str) and data["answerText"], "AI answerText missing")
+    assert_true(isinstance(data.get("sources"), list), "AI sources must be a list")
+    assert_true(isinstance(data.get("riskNote"), str) and data["riskNote"], "AI riskNote missing")
+
+
+def assert_record_draft(data: dict[str, Any], patient_id: str) -> None:
+    assert_ai_base_shape(data, "care_record", "record")
+    draft = data.get("draftPayload")
+    assert_true(isinstance(draft, dict), "record draftPayload must be an object")
+    assert_true(draft.get("patientId") == patient_id, "record draft patientId did not match created patient")
+    assert_true(draft.get("recordType") == "blood_pressure", "record draft recordType should be blood_pressure")
+    assert_true(isinstance(draft.get("occurredAt"), str) and draft["occurredAt"], "record draft occurredAt missing")
+    assert_true(isinstance(draft.get("notes"), str), "record draft notes must be a string")
+    metrics = draft.get("metrics")
+    assert_true(isinstance(metrics, dict), "record draft metrics must be an object")
+    assert_true(metrics.get("bloodPressureSystolic") == "130", "systolic metric should be split into its own field")
+    assert_true(metrics.get("bloodPressureDiastolic") == "85", "diastolic metric should be split into its own field")
+    assert_true("bloodPressure" not in metrics, "blood pressure must not be stored as a combined metric")
+
+
+def assert_task_draft(data: dict[str, Any], patient_id: str) -> None:
+    assert_ai_base_shape(data, "care_task", "task")
+    draft = data.get("draftPayload")
+    assert_true(isinstance(draft, dict), "task draftPayload must be an object")
+    assert_true(draft.get("patientId") == patient_id, "task draft patientId did not match created patient")
+    assert_true(isinstance(draft.get("title"), str) and draft["title"], "task draft title missing")
+    assert_true(draft.get("taskType") == "blood_pressure", "task draft taskType should be blood_pressure")
+    assert_true(draft.get("repeatRule") == "daily", "task draft repeatRule should be daily")
+    assert_true(draft.get("priority") == "normal", "task draft priority should be normal")
+    assert_true(isinstance(draft.get("remindOffsetMinutes"), int), "task draft remindOffsetMinutes must be integer")
+
+
 def main() -> None:
     now = datetime.now(timezone.utc)
     unique_suffix = now.strftime("%Y%m%d%H%M%S")
@@ -169,7 +205,19 @@ def main() -> None:
         completed_task = unwrap(client.post(f"/api/tasks/{task_id}/complete", json={}))
         assert_true(completed_task.get("status") == "completed", "task completion did not set status=completed")
 
-        ai_response = unwrap(
+        qa_response = unwrap(
+            client.post(
+                "/api/ai/assistant",
+                json={
+                    "message": "高血压患者在日常饮食上需要注意哪些事项？",
+                    "conversationId": None,
+                },
+            )
+        )
+        assert_ai_base_shape(qa_response, "qa", None)
+        assert_true(qa_response.get("draftPayload") is None, "QA draftPayload must be null")
+
+        record_draft_response = unwrap(
             client.post(
                 "/api/ai/assistant",
                 json={
@@ -178,7 +226,18 @@ def main() -> None:
                 },
             )
         )
-        assert_true(ai_response.get("draftType") == "record", "AI assistant did not return draftType=record")
+        assert_record_draft(record_draft_response, patient_id)
+
+        task_draft_response = unwrap(
+            client.post(
+                "/api/ai/assistant",
+                json={
+                    "message": f"帮我创建一个每天早上8点给{patient_name}测血压的任务",
+                    "conversationId": None,
+                },
+            )
+        )
+        assert_task_draft(task_draft_response, patient_id)
 
     print("smoke test passed")
 
