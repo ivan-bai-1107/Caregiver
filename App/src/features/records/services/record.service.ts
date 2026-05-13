@@ -23,6 +23,13 @@ interface PagedResponse<T> {
   total?: number;
 }
 
+interface CareRecordListQuery {
+  patientId?: string;
+  recordType?: RecordType;
+  page?: number;
+  pageSize?: number;
+}
+
 interface CareMetricDto {
   key?: string;
   value?: number | string;
@@ -159,9 +166,9 @@ export async function updateCareRecord(recordId: string, draft: CareRecordDraft)
   return toCareRecord(response);
 }
 
-export async function listCareRecords() {
+export async function listCareRecords(params: CareRecordListQuery = {}) {
   const [response, patients] = await Promise.all([
-    apiClient.get<PagedResponse<CareRecordDto>>("/api/care-records"),
+    apiClient.get<PagedResponse<CareRecordDto>>("/api/care-records", params),
     listPatients(),
   ]);
   const patientNameMap = toPatientNameMap(patients);

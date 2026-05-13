@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.care_task import CareTask
@@ -47,14 +47,45 @@ def is_task_overdue(task: CareTask) -> bool:
     return remind_time < datetime.now(timezone.utc)
 
 
-def list_tasks(db: Session, user: User) -> PagedResponse[CareTaskOut]:
+def list_tasks(
+    db: Session,
+    user: User,
+    patient_id: str | None = None,
+    status_filter: str | None = None,
+    repeat_rule: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> PagedResponse[CareTaskOut]:
+    filters = [Patient.user_id == user.id]
+    if patient_id:
+        filters.append(CareTask.patient_id == patient_id)
+    if status_filter:
+        filters.append(CareTask.status == status_filter)
+    if repeat_rule:
+        filters.append(CareTask.repeat_rule == repeat_rule)
+
+    total = (
+        db.scalar(
+            select(func.count(CareTask.id))
+            .join(Patient)
+            .where(*filters)
+        )
+        or 0
+    )
     tasks = db.scalars(
         select(CareTask)
         .join(Patient)
-        .where(Patient.user_id == user.id)
+        .where(*filters)
         .order_by(CareTask.remind_time.asc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     ).all()
-    return PagedResponse(items=[to_task_out(task) for task in tasks], total=len(tasks))
+    return PagedResponse(
+        items=[to_task_out(task) for task in tasks],
+        page=page,
+        page_size=page_size,
+        total=total,
+    )
 
 
 def create_task(db: Session, user: User, payload: CareTaskCreate) -> CareTaskOut:

@@ -46,15 +46,31 @@ def to_patient_out(patient: Patient) -> PatientOut:
     )
 
 
-def list_patients(db: Session, user: User) -> PagedResponse[PatientOut]:
+def list_patients(
+    db: Session,
+    user: User,
+    keyword: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> PagedResponse[PatientOut]:
+    filters = [Patient.user_id == user.id]
+    keyword_value = keyword.strip() if keyword else ""
+    if keyword_value:
+        filters.append(Patient.name.ilike(f"%{keyword_value}%"))
+
+    total = db.scalar(select(func.count(Patient.id)).where(*filters)) or 0
     patients = db.scalars(
         select(Patient)
-        .where(Patient.user_id == user.id)
+        .where(*filters)
         .order_by(Patient.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     ).all()
     return PagedResponse(
         items=[to_patient_out(patient) for patient in patients],
-        total=len(patients),
+        page=page,
+        page_size=page_size,
+        total=total,
     )
 
 

@@ -40,6 +40,12 @@ interface PagedResponse<T> {
   total?: number;
 }
 
+interface PatientListQuery {
+  keyword?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 interface PatientDto {
   id?: string;
   userId?: string;
@@ -314,8 +320,8 @@ export function validatePatientFormDraft(draft: PatientFormDraft): PatientFormVa
   };
 }
 
-export async function listPatients() {
-  const response = await apiClient.get<PagedResponse<PatientDto>>("/api/patients");
+export async function listPatients(params: PatientListQuery = {}) {
+  const response = await apiClient.get<PagedResponse<PatientDto>>("/api/patients", params);
   return (response.items ?? []).map(toPatient);
 }
 

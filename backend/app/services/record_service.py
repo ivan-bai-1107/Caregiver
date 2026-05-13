@@ -1,7 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.care_metric import CareMetric
@@ -92,15 +92,43 @@ def record_value_text(record: CareRecord) -> str:
     return str(metric_map.get("observationText", record.notes))
 
 
-def list_records(db: Session, user: User) -> PagedResponse[CareRecordOut]:
+def list_records(
+    db: Session,
+    user: User,
+    patient_id: str | None = None,
+    record_type: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> PagedResponse[CareRecordOut]:
+    filters = [Patient.user_id == user.id]
+    if patient_id:
+        filters.append(CareRecord.patient_id == patient_id)
+    if record_type:
+        filters.append(CareRecord.record_type == record_type)
+
+    total = (
+        db.scalar(
+            select(func.count(CareRecord.id))
+            .join(Patient)
+            .where(*filters)
+        )
+        or 0
+    )
     records = db.scalars(
         select(CareRecord)
         .join(Patient)
-        .where(Patient.user_id == user.id)
+        .where(*filters)
         .options(selectinload(CareRecord.metrics))
         .order_by(CareRecord.occurred_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     ).all()
-    return PagedResponse(items=[to_record_out(record) for record in records], total=len(records))
+    return PagedResponse(
+        items=[to_record_out(record) for record in records],
+        page=page,
+        page_size=page_size,
+        total=total,
+    )
 
 
 def create_record(db: Session, user: User, payload: CareRecordCreate) -> CareRecordOut:

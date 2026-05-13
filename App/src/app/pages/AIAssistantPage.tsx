@@ -91,6 +91,10 @@ function getDraftRows(draftType: Exclude<AIDraftType, null>, payload: NonNullabl
   ].filter(([, value]) => value !== undefined && value !== "");
 }
 
+function isConfirmableDraftType(draftType: AIDraftType): draftType is Exclude<AIDraftType, null> {
+  return draftType === "record" || draftType === "task";
+}
+
 function toAiMessage(response: AIAssistantResponse): ChatMessage {
   return {
     id: genMessageId(),
@@ -151,17 +155,18 @@ export function AIAssistantPage() {
   }
 
   function handleConfirmDraft(message: ChatMessage) {
-    if (!message.draftType || !message.draftPayload) {
+    const draftType = message.draftType ?? null;
+    if (!isConfirmableDraftType(draftType) || !message.draftPayload) {
       return;
     }
 
     storeAIDraft({
-      draftType: message.draftType,
+      draftType,
       draftPayload: message.draftPayload,
       answerText: message.content,
       riskNote: message.riskNote ?? "请核对 AI 草稿后再确认保存。",
     });
-    navigate(`/ai-confirm?type=${message.draftType}`);
+    navigate(`/ai-confirm?type=${draftType}`);
   }
 
   const isEmpty = messages.length === 0 && !isSending;

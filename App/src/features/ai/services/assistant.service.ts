@@ -25,11 +25,21 @@ export function readStoredAIDraft(): StoredAIDraft | null {
   }
 
   try {
-    const parsed = JSON.parse(rawValue) as StoredAIDraft;
+    const parsed = JSON.parse(rawValue) as Partial<StoredAIDraft>;
     if (parsed.draftType !== "record" && parsed.draftType !== "task") {
       return null;
     }
-    return parsed;
+    if (
+      !parsed.draftPayload ||
+      typeof parsed.draftPayload !== "object" ||
+      Array.isArray(parsed.draftPayload)
+    ) {
+      return null;
+    }
+    if (typeof parsed.answerText !== "string" || typeof parsed.riskNote !== "string") {
+      return null;
+    }
+    return parsed as StoredAIDraft;
   } catch {
     return null;
   }

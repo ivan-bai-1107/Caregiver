@@ -17,6 +17,14 @@ interface PagedResponse<T> {
   total?: number;
 }
 
+interface CareTaskListQuery {
+  patientId?: string;
+  status?: CareTaskStatus;
+  repeatRule?: CareTaskRepeatRule;
+  page?: number;
+  pageSize?: number;
+}
+
 interface CareTaskDto {
   id?: string;
   patientId?: string;
@@ -90,8 +98,8 @@ function toCareTask(dto: CareTaskDto): CareTask {
   };
 }
 
-export async function listCareTasks() {
-  const response = await apiClient.get<PagedResponse<CareTaskDto>>("/api/tasks");
+export async function listCareTasks(params: CareTaskListQuery = {}) {
+  const response = await apiClient.get<PagedResponse<CareTaskDto>>("/api/tasks", params);
   return (response.items ?? []).map(toCareTask);
 }
 

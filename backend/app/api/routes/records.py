@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -17,8 +17,14 @@ router = APIRouter(prefix="/care-records", tags=["care-records"])
 def read_records(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
+    patient_id: Annotated[str | None, Query(alias="patientId")] = None,
+    record_type: Annotated[str | None, Query(alias="recordType")] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
 ) -> dict[str, object]:
-    return success_response(list_records(db, current_user))
+    return success_response(
+        list_records(db, current_user, patient_id, record_type, page, page_size)
+    )
 
 
 @router.post("")
