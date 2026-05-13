@@ -75,6 +75,45 @@ def assert_task_draft(data: dict[str, Any], patient_id: str) -> None:
     assert_true(isinstance(draft.get("remindOffsetMinutes"), int), "task draft remindOffsetMinutes must be integer")
 
 
+def assert_knowledge_flow(client: httpx.Client) -> None:
+    categories = unwrap(client.get("/api/knowledge/categories"))
+    assert_true(isinstance(categories, list) and len(categories) > 0, "knowledge categories should not be empty")
+
+    articles_page = unwrap(
+        client.get(
+            "/api/knowledge/articles",
+            params={"q": "护理", "categoryId": categories[0]["id"], "page": 1, "pageSize": 10},
+        )
+    )
+    if not articles_page.get("items"):
+        articles_page = unwrap(client.get("/api/knowledge/articles", params={"page": 1, "pageSize": 10}))
+
+    articles = articles_page.get("items", [])
+    assert_true(isinstance(articles, list) and len(articles) > 0, "knowledge articles should not be empty")
+    article_id = articles[0].get("id")
+    assert_true(isinstance(article_id, str) and article_id, "knowledge article id missing")
+
+    detail = unwrap(client.get(f"/api/knowledge/articles/{article_id}"))
+    assert_true(detail.get("id") == article_id, "knowledge detail returned unexpected article")
+    assert_true(isinstance(detail.get("content"), str) and detail["content"], "knowledge detail content missing")
+
+    related = unwrap(client.get(f"/api/knowledge/articles/{article_id}/related"))
+    assert_true(isinstance(related, list), "knowledge related articles must be a list")
+
+    viewed = unwrap(client.post(f"/api/knowledge/articles/{article_id}/view", json={}))
+    assert_true(viewed.get("articleId") == article_id, "knowledge view action returned unexpected article")
+    assert_true(isinstance(viewed.get("viewCount"), int), "knowledge viewCount must be integer")
+
+    liked = unwrap(client.post(f"/api/knowledge/articles/{article_id}/like", json={}))
+    assert_true(liked.get("isLiked") is True, "knowledge like should mark article as liked")
+
+    bookmarked = unwrap(client.post(f"/api/knowledge/articles/{article_id}/bookmark", json={}))
+    assert_true(bookmarked.get("isBookmarked") is True, "knowledge bookmark should mark article as bookmarked")
+
+    removed = unwrap(client.delete(f"/api/knowledge/articles/{article_id}/bookmark"))
+    assert_true(removed.get("isBookmarked") is False, "knowledge bookmark delete should clear bookmark")
+
+
 def main() -> None:
     now = datetime.now(timezone.utc)
     unique_suffix = now.strftime("%Y%m%d%H%M%S")
@@ -204,6 +243,8 @@ def main() -> None:
 
         completed_task = unwrap(client.post(f"/api/tasks/{task_id}/complete", json={}))
         assert_true(completed_task.get("status") == "completed", "task completion did not set status=completed")
+
+        assert_knowledge_flow(client)
 
         qa_response = unwrap(
             client.post(

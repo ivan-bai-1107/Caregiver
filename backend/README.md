@@ -1,6 +1,6 @@
 # Backend
 
-FastAPI 后端服务，提供 Auth、Users/Profile、Home、Patients、Care Records、Tasks、Trends、AI Assistant 主业务接口。
+FastAPI 后端服务，提供 Auth、Users/Profile、Home、Patients、Care Records、Tasks、Trends、Profile、AI Assistant、Knowledge 主业务接口。
 
 ## 环境准备
 
@@ -62,6 +62,11 @@ Seed 账号：
 - 邮箱：`caregiver@example.com`
 - 密码：`password123`
 
+Seed 数据还包括：
+
+- 知识分类：慢病管理、饮食护理、康复训练、常见症状处理
+- 知识文章：高血压、糖尿病、营养、压疮预防、康复训练、发热观察等演示内容
+
 ## 启动服务
 
 ```powershell
@@ -76,6 +81,17 @@ uvicorn app.main:app --reload
 - OpenAPI JSON: http://127.0.0.1:8000/openapi.json
 - Health Check: http://127.0.0.1:8000/health
 
+## Knowledge API
+
+- `GET /api/knowledge/categories`
+- `GET /api/knowledge/articles?q=&categoryId=&page=&pageSize=`
+- `GET /api/knowledge/articles/{id}`
+- `GET /api/knowledge/articles/{id}/related`
+- `POST /api/knowledge/articles/{id}/view`
+- `POST /api/knowledge/articles/{id}/like`
+- `POST /api/knowledge/articles/{id}/bookmark`
+- `DELETE /api/knowledge/articles/{id}/bookmark`
+
 ## AI Provider
 
 `POST /api/ai/assistant` 对前端保持统一接口，前端不直接接触 DeepSeek，也不保存任何 DeepSeek key。
@@ -85,7 +101,7 @@ uvicorn app.main:app --reload
 ```env
 AI_PROVIDER=deepseek
 AI_USE_REAL_MODEL=true
-DEEPSEEK_API_KEY=your-deepseek-api-key
+DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-v4-flash
 ```
@@ -117,3 +133,5 @@ python scripts/api_smoke_test.py
 ```text
 smoke test passed
 ```
+
+Smoke test 覆盖主闭环、AI fallback，以及 Knowledge 分类、列表、详情、相关推荐、浏览、点赞、收藏和取消收藏。

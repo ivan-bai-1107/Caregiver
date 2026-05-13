@@ -7,6 +7,11 @@
 - `App/`：Vite + React + TypeScript 前端
 - `backend/`：FastAPI + SQLAlchemy 2.x + Alembic 后端
 
+当前已接入真实后端的主模块：
+
+- Auth / Users / Home / Patients / Records / Tasks / Trends / Profile / AI Assistant
+- Knowledge：分类、文章列表、搜索、详情、相关推荐、浏览、点赞、收藏
+
 ## 前端启动
 
 ```powershell
@@ -86,6 +91,8 @@ Seed 账号：
 - 邮箱：`caregiver@example.com`
 - 密码：`password123`
 
+Seed 还会写入知识分类和知识文章，用于 Knowledge 模块演示。
+
 ## 前端切真实后端
 
 默认前端可回退到 Apifox Mock。切真实后端时，在 `App/.env.local` 写入：
@@ -125,3 +132,5 @@ python scripts/api_smoke_test.py
 $env:BASE_URL="http://127.0.0.1:8000"
 python scripts/api_smoke_test.py
 ```
+
+Smoke test 覆盖主闭环、AI fallback 场景，以及 Knowledge 分类 / 列表 / 详情 / 点赞 / 收藏。

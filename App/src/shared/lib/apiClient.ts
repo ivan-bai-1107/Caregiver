@@ -101,4 +101,14 @@ export const apiClient = {
       body,
     });
   },
+  delete: <T>(
+    path: string,
+    query?: Record<string, QueryValue>,
+    options?: Omit<RequestOptions, "query">,
+  ) =>
+    request<T>(path, {
+      ...options,
+      method: "DELETE",
+      query,
+    }),
 };

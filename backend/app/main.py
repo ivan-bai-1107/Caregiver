@@ -3,7 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import ai, auth, home, patients, records, tasks, trends, users
+from app.api.routes import ai, auth, home, knowledge, patients, records, tasks, trends, users
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -46,6 +46,7 @@ def health_check() -> dict[str, object]:
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(users.router, prefix=settings.api_prefix)
 app.include_router(home.router, prefix=settings.api_prefix)
+app.include_router(knowledge.router, prefix=settings.api_prefix)
 app.include_router(patients.router, prefix=settings.api_prefix)
 app.include_router(records.router, prefix=settings.api_prefix)
 app.include_router(tasks.router, prefix=settings.api_prefix)

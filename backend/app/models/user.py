@@ -36,6 +36,8 @@ class User(Base):
         uselist=False,
     )
     ai_logs = relationship("AiAssistantLog", back_populates="user", cascade="all, delete-orphan")
+    knowledge_likes = relationship("UserKnowledgeLike", back_populates="user", cascade="all, delete-orphan")
+    knowledge_bookmarks = relationship("UserKnowledgeBookmark", back_populates="user", cascade="all, delete-orphan")
 
 
 class EmailVerificationCode(Base):
