@@ -66,14 +66,6 @@ export function ProfilePreferencesSection({
         </div>
       </div>
 
-      <div className="bg-card rounded-2xl p-5 border border-border">
-        <p className="text-sm font-medium mb-2">本轮说明</p>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          当前 OpenAPI 契约仅提供 `theme` 与 `language` 两组偏好字段。
-          字体大小、图表样式等未出现在正式契约中，因此不再保留为可提交设置。
-        </p>
-      </div>
-
       <button
         onClick={onSubmit}
         disabled={isSubmitting}

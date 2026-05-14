@@ -7,11 +7,16 @@ class UserProfile(CamelModel):
     id: str
     username: str
     email: EmailStr
+    avatar_url: str = ""
 
 
 class UserProfileUpdate(CamelModel):
     username: str = Field(min_length=1, max_length=80)
     email: EmailStr
+
+
+class UserAvatarUpdate(CamelModel):
+    image_data: str = Field(min_length=1)
 
 
 class UserStats(CamelModel):

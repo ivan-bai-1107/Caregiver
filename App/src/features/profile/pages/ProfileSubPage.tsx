@@ -74,7 +74,16 @@ function ProfileInfoContent() {
       draft={infoState.draft}
       fieldErrors={infoState.fieldErrors}
       isSubmitting={infoState.isSubmitting}
+      isUploadingAvatar={infoState.isUploadingAvatar}
       onChange={infoState.updateDraft}
+      onAvatarUpload={async (imageData) => {
+        const result = await infoState.uploadAvatar(imageData);
+        if (!result.ok) {
+          toast.error("头像上传失败，请稍后重试。");
+          return;
+        }
+        toast.success("头像已更新");
+      }}
       onSubmit={async () => {
         const result = await infoState.submit();
         if (!result.ok) {

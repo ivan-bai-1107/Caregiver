@@ -1,7 +1,10 @@
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import admin, ai, auth, care, community, home, knowledge, patients, records, tasks, trends, users
 from app.core.config import get_settings
@@ -10,6 +13,9 @@ from app.core.redis import redis_is_available
 settings = get_settings()
 
 app = FastAPI(title=settings.app_name)
+uploads_dir = Path(__file__).resolve().parents[1] / "uploads"
+uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,

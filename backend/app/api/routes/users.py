@@ -7,7 +7,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.responses import success_response
 from app.models.user import User
-from app.schemas.user import UserNotificationSettings, UserPreferences, UserProfileUpdate
+from app.schemas.user import UserAvatarUpdate, UserNotificationSettings, UserPreferences, UserProfileUpdate
 from app.services.user_service import (
     get_or_create_notification_settings,
     get_or_create_preferences,
@@ -17,6 +17,7 @@ from app.services.user_service import (
     to_user_profile,
     update_notification_settings,
     update_preferences,
+    update_user_avatar,
     update_user_profile,
 )
 
@@ -35,6 +36,15 @@ def update_me(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> dict[str, object]:
     return success_response(update_user_profile(db, current_user, payload))
+
+
+@router.put("/me/avatar")
+def update_my_avatar(
+    payload: UserAvatarUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, object]:
+    return success_response(update_user_avatar(db, current_user, payload))
 
 
 @router.get("/me/stats")

@@ -13,6 +13,7 @@ export interface CurrentUser {
   id: string;
   username: string;
   email: string;
+  avatarUrl?: string;
 }
 
 function getSessionStorage(): AuthStorage | null {

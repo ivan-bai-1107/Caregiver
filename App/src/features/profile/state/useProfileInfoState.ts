@@ -4,7 +4,11 @@ import {
   validateUserProfileDraft,
   type UserProfileDraft,
 } from "@/features/profile/model";
-import { getUserProfile, updateUserProfile } from "@/features/profile/services/profile.service";
+import {
+  getUserProfile,
+  updateUserAvatar,
+  updateUserProfile,
+} from "@/features/profile/services/profile.service";
 
 export function useProfileInfoState() {
   const [profileId, setProfileId] = useState("");
@@ -13,6 +17,7 @@ export function useProfileInfoState() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   async function loadProfile() {
     setIsLoading(true);
@@ -74,6 +79,21 @@ export function useProfileInfoState() {
     }
   }
 
+  async function uploadAvatar(imageData: string) {
+    setIsUploadingAvatar(true);
+
+    try {
+      const profile = await updateUserAvatar(imageData);
+      setProfileId(profile.id);
+      setDraft(createUserProfileDraft(profile));
+      return { ok: true as const, profile };
+    } catch (error) {
+      return { ok: false as const };
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  }
+
   return {
     profileId,
     draft,
@@ -81,7 +101,9 @@ export function useProfileInfoState() {
     isLoading,
     loadError,
     isSubmitting,
+    isUploadingAvatar,
     updateDraft,
+    uploadAvatar,
     submit,
     retry: loadProfile,
   };

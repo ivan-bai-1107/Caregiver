@@ -169,23 +169,6 @@ export function CommunityListPage() {
           </div>
         ) : null}
 
-        <div className="mt-8 bg-gradient-to-br from-accent/10 to-accent/5 rounded-2xl p-6 border border-accent/20">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
-              <Shield className="w-6 h-6 text-accent" />
-            </div>
-            <div>
-              <h3 className="font-medium mb-2">社区规范</h3>
-              <div className="space-y-2 text-sm text-foreground/80">
-                <p>可以分享：护理技巧、经验心得、工具表格。</p>
-                <p>禁止发布：疾病诊断、药品推荐、广告推广。</p>
-                <p className="text-xs text-muted-foreground mt-3">
-                  违规内容将被拒绝或下架，严重违规用户会被后台禁用。
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
       </div>
     </div>

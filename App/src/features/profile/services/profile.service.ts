@@ -5,13 +5,15 @@ import type {
   UserProfileDraft,
   UserStats,
 } from "@/features/profile/model";
+import { env } from "@/shared/constants/env";
 import { apiClient } from "@/shared/lib/apiClient";
-import { setCurrentUser } from "@/shared/lib/auth";
+import { getAuthToken, setCurrentUser } from "@/shared/lib/auth";
 
 interface UserProfileDto {
   id?: string;
   username?: string;
   email?: string;
+  avatarUrl?: string;
 }
 
 interface UserStatsDto {
@@ -37,7 +39,20 @@ function toUserProfile(dto: UserProfileDto): UserProfile {
     id: String(dto.id ?? ""),
     username: String(dto.username ?? ""),
     email: String(dto.email ?? ""),
+    avatarUrl: String(dto.avatarUrl ?? ""),
   };
+}
+
+export function resolveProfileMediaUrl(url: string) {
+  if (!url) {
+    return "";
+  }
+  if (/^https?:\/\//i.test(url) || url.startsWith("data:")) {
+    return url;
+  }
+
+  const apiOrigin = new URL(env.apiBaseUrl).origin;
+  return `${apiOrigin}${url.startsWith("/") ? url : `/${url}`}`;
 }
 
 function toUserStats(dto: UserStatsDto): UserStats {
@@ -64,6 +79,15 @@ function toUserPreferences(dto: UserPreferencesDto): UserPreferences {
   };
 }
 
+export function applyUserPreferences(preferences: UserPreferences) {
+  const root = document.documentElement;
+  const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+  const shouldUseDark = preferences.theme === "dark" || (preferences.theme === "system" && prefersDark);
+
+  root.classList.toggle("dark", shouldUseDark);
+  root.lang = preferences.language || "zh-CN";
+}
+
 export async function getUserProfile() {
   const response = await apiClient.get<UserProfileDto>("/api/users/me");
   return toUserProfile(response);
@@ -75,6 +99,28 @@ export async function updateUserProfile(draft: UserProfileDraft) {
     email: draft.email.trim(),
   });
   const profile = toUserProfile(response);
+  setCurrentUser(profile);
+  return profile;
+}
+
+export async function updateUserAvatar(imageData: string) {
+  const token = getAuthToken();
+  const response = await fetch(`${env.apiBaseUrl}/api/users/me/avatar`, {
+    method: "PUT",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : null),
+    },
+    body: JSON.stringify({ imageData }),
+  });
+  const payload = await response.json();
+
+  if (!response.ok || payload?.success === false) {
+    throw new Error(String(payload?.message ?? "头像上传失败，请稍后重试。"));
+  }
+
+  const profile = toUserProfile(payload.data ?? {});
   setCurrentUser(profile);
   return profile;
 }
@@ -104,7 +150,9 @@ export async function updateUserNotificationSettings(settings: UserNotificationS
 
 export async function getUserPreferences() {
   const response = await apiClient.get<UserPreferencesDto>("/api/users/me/preferences");
-  return toUserPreferences(response);
+  const preferences = toUserPreferences(response);
+  applyUserPreferences(preferences);
+  return preferences;
 }
 
 export async function updateUserPreferences(preferences: UserPreferences) {
@@ -113,5 +161,7 @@ export async function updateUserPreferences(preferences: UserPreferences) {
     language: preferences.language,
   });
 
-  return toUserPreferences(response);
+  const savedPreferences = toUserPreferences(response);
+  applyUserPreferences(savedPreferences);
+  return savedPreferences;
 }

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { Plus, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Plus, Sparkles, X } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { appRoutes } from "@/shared/constants/routes";
 import { TaskCard } from "@/features/tasks/components/TaskCard";
@@ -42,9 +42,14 @@ export function TaskListPage() {
 
       <div className="mobile-fixed-page-header rounded-b-[2rem] bg-gradient-to-br from-primary to-primary/80 px-6 pb-6 pt-12 text-white">
         <div className="mb-5 flex items-center justify-between">
-          <h1 className="text-2xl" style={{ fontFamily: "var(--font-display)" }}>
-            护理任务
-          </h1>
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate(-1)} className="p-2 -ml-2" aria-label="返回上一页" type="button">
+              <ArrowLeft className="h-6 w-6" />
+            </button>
+            <h1 className="text-2xl" style={{ fontFamily: "var(--font-display)" }}>
+              护理任务
+            </h1>
+          </div>
           <div className="flex items-center gap-2">
             <button
               className="flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-sm backdrop-blur-sm"

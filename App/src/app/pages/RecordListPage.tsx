@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import {
+  ArrowLeft,
   Plus,
   Activity,
   Thermometer,
@@ -75,9 +76,14 @@ export function RecordListPage() {
     <div className="mobile-fixed-page bg-background">
       <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl" style={{ fontFamily: "var(--font-display)" }}>
-            护理记录
-          </h1>
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate(-1)} className="p-2 -ml-2" aria-label="返回上一页" type="button">
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <h1 className="text-2xl" style={{ fontFamily: "var(--font-display)" }}>
+              护理记录
+            </h1>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate("/ai-assistant")}

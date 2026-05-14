@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { Search, Plus, TrendingUp, AlertCircle } from "lucide-react";
+import { ArrowLeft, Search, Plus, TrendingUp, AlertCircle } from "lucide-react";
 import { usePatientListState } from "@/features/patients/state/usePatientListState";
 
 export function PatientListPage() {
@@ -12,9 +12,14 @@ export function PatientListPage() {
   return (
     <div className="mobile-fixed-page bg-background">
       <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
-        <h1 className="text-2xl mb-4" style={{ fontFamily: "var(--font-display)" }}>
-          我的患者
-        </h1>
+        <div className="mb-4 flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2" aria-label="返回上一页" type="button">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-2xl" style={{ fontFamily: "var(--font-display)" }}>
+            我的患者
+          </h1>
+        </div>
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
           <input

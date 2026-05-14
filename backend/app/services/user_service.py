@@ -1,3 +1,7 @@
+import base64
+import re
+from pathlib import Path
+
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -8,6 +12,7 @@ from app.models.patient import Patient
 from app.models.user import User
 from app.models.user_settings import UserNotificationSetting, UserPreference
 from app.schemas.user import (
+    UserAvatarUpdate,
     UserNotificationSettings,
     UserPreferences,
     UserProfile,
@@ -15,9 +20,19 @@ from app.schemas.user import (
     UserStats,
 )
 
+AVATAR_UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads" / "avatars"
+AVATAR_DATA_URL_RE = re.compile(r"^data:image/(png|jpeg|jpg|webp);base64,(?P<data>.+)$", re.DOTALL)
+AVATAR_EXTENSIONS = {"jpeg": "jpg", "jpg": "jpg", "png": "png", "webp": "webp"}
+MAX_AVATAR_BYTES = 2 * 1024 * 1024
+
 
 def to_user_profile(user: User) -> UserProfile:
-    return UserProfile(id=user.id, username=user.username, email=user.email)
+    return UserProfile(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        avatar_url=user.avatar_url or "",
+    )
 
 
 def update_user_profile(db: Session, user: User, payload: UserProfileUpdate) -> UserProfile:
@@ -27,6 +42,33 @@ def update_user_profile(db: Session, user: User, payload: UserProfileUpdate) -> 
 
     user.username = payload.username
     user.email = payload.email
+    db.commit()
+    db.refresh(user)
+    return to_user_profile(user)
+
+
+def update_user_avatar(db: Session, user: User, payload: UserAvatarUpdate) -> UserProfile:
+    match = AVATAR_DATA_URL_RE.match(payload.image_data)
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="头像图片格式不支持。")
+
+    image_type = match.group(1)
+    extension = AVATAR_EXTENSIONS[image_type]
+
+    try:
+        image_bytes = base64.b64decode(match.group("data"), validate=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="头像图片内容无效。") from exc
+
+    if len(image_bytes) > MAX_AVATAR_BYTES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="头像图片不能超过 2MB。")
+
+    AVATAR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{user.id}.{extension}"
+    file_path = AVATAR_UPLOAD_DIR / filename
+    file_path.write_bytes(image_bytes)
+
+    user.avatar_url = f"/uploads/avatars/{filename}"
     db.commit()
     db.refresh(user)
     return to_user_profile(user)

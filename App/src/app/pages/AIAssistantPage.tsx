@@ -200,6 +200,12 @@ export function AIAssistantPage() {
   }
 
   function handleVoiceInput() {
+    const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    if (!window.isSecureContext && !isLocalhost) {
+      setError("语音输入需要浏览器安全来源。局域网访问请使用 HTTPS，或用 Chrome 安全来源模式打开本页面。");
+      return;
+    }
+
     const SpeechRecognition =
       (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
 
@@ -228,8 +234,12 @@ export function AIAssistantPage() {
         setInput((current) => `${current}${current ? " " : ""}${transcript}`);
       }
     };
-    recognition.onerror = () => {
-      setError("语音识别失败，请重新尝试或手动输入。");
+    recognition.onerror = (event: any) => {
+      const message =
+        event?.error === "not-allowed"
+          ? "麦克风权限未开启，请在 Chrome 地址栏允许麦克风后重试。"
+          : "语音识别失败，请重新尝试或手动输入。";
+      setError(message);
       setIsListening(false);
     };
     recognition.onend = () => {
@@ -237,8 +247,13 @@ export function AIAssistantPage() {
     };
     recognitionRef.current = recognition;
     setError(null);
-    setIsListening(true);
-    recognition.start();
+    try {
+      recognition.start();
+      setIsListening(true);
+    } catch {
+      setError("语音输入启动失败，请刷新页面后重试。");
+      setIsListening(false);
+    }
   }
 
   const isEmpty = messages.length === 0 && !isSending;

@@ -65,13 +65,6 @@ export function ProfileNotificationSettingsSection({
         </div>
       </div>
 
-      <div className="bg-card rounded-2xl p-5 border border-border">
-        <p className="text-sm font-medium mb-2">本轮说明</p>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          当前 OpenAPI 契约只提供任务提醒、健康异常提醒和系统通知三组开关。
-          社区通知、免打扰时段等扩展项暂不纳入正式前端模型。
-        </p>
-      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@ export interface UserProfile {
   id: string;
   username: string;
   email: string;
+  avatarUrl: string;
 }
 
 export interface UserStats {
@@ -25,6 +26,7 @@ export interface UserPreferences {
 export interface UserProfileDraft {
   username: string;
   email: string;
+  avatarUrl: string;
 }
 
 export interface UserProfileValidationResult {
@@ -36,6 +38,7 @@ export function createUserProfileDraft(profile?: UserProfile): UserProfileDraft 
   return {
     username: profile?.username ?? "",
     email: profile?.email ?? "",
+    avatarUrl: profile?.avatarUrl ?? "",
   };
 }
 

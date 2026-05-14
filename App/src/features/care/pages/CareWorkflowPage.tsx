@@ -12,7 +12,6 @@ import {
   Heart,
   Loader2,
   Pill,
-  Plus,
   RefreshCw,
   Search,
   Sparkles,
@@ -119,13 +118,6 @@ export function CareWorkflowPage() {
     { key: "records", label: "记录", icon: ClipboardList, count: workbench.summary.recordCount },
     { key: "tasks", label: "任务", icon: CheckSquare, count: workbench.summary.pendingTaskCount },
   ];
-  const addAction =
-    activeTab === "patients"
-      ? { label: "添加患者", path: "/patients/new" }
-      : activeTab === "records"
-        ? { label: "新增记录", path: "/records/new" }
-        : { label: "新增任务", path: "/tasks/new" };
-
   async function handleRefresh() {
     const ok = await loadWorkbench(true);
     if (ok) {
@@ -146,17 +138,10 @@ export function CareWorkflowPage() {
     <div className="mobile-fixed-page bg-background">
       <Toaster position="top-center" richColors />
       <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4">
           <h1 className="text-2xl" style={{ fontFamily: "var(--font-display)" }}>
             照护工作台
           </h1>
-          <button
-            onClick={() => navigate(addAction.path)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-white/20 rounded-xl backdrop-blur-sm text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            {addAction.label}
-          </button>
         </div>
 
         <div className="grid grid-cols-4 gap-2 bg-white/10 backdrop-blur-sm rounded-2xl p-4">
@@ -176,47 +161,6 @@ export function CareWorkflowPage() {
             <div className="text-2xl mb-0.5">{workbench.summary.overdueTaskCount}</div>
             <div className="text-white/70 text-xs">逾期</div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 mt-4">
-          {[
-            { label: "查看患者", path: "/patients", icon: Users },
-            { label: "查看记录", path: "/records", icon: ClipboardList },
-            { label: "查看任务", path: "/tasks", icon: CheckSquare },
-          ].map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-white/20 px-2 py-2.5 text-xs text-white backdrop-blur-sm"
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-4 gap-2 mt-4">
-          {[
-            { label: "新增患者", path: "/patients/new", icon: Users },
-            { label: "新增记录", path: "/records/new", icon: ClipboardList },
-            { label: "新增任务", path: "/tasks/new", icon: CheckSquare },
-            { label: "AI 助手", path: "/ai-assistant", icon: Sparkles },
-          ].map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className="rounded-xl bg-white/15 px-2 py-3 text-xs text-white/90"
-              >
-                <Icon className="mx-auto mb-1 h-4 w-4" />
-                {item.label}
-              </button>
-            );
-          })}
         </div>
       </div>
 
