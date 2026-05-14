@@ -29,7 +29,7 @@ export function useHomePageState() {
   }, []);
 
   const summary = useMemo(() => {
-    const pendingTaskCount = taskItems.filter((item) => item.status === "pending").length;
+    const pendingTaskCount = taskItems.filter((item) => item.status !== "completed").length;
     const completedTaskCount = taskItems.filter((item) => item.status === "completed").length;
 
     return {

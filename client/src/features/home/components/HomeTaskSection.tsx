@@ -54,7 +54,7 @@ export function HomeTaskSection({
               </div>
               <p className="text-xs text-muted-foreground">患者：{task.patientName}</p>
             </div>
-            {task.status === "pending" ? (
+            {task.status !== "completed" ? (
               <button
                 onClick={() => onCompleteTask(task.id, task.title)}
                 className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs flex-shrink-0"
