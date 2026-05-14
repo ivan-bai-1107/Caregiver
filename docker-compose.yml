@@ -10,6 +10,8 @@ services:
       - "5432:5432"
     volumes:
       - caregiver_postgres_data:/var/lib/postgresql/data
+    networks:
+      - caregiver
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U caregiver -d caregiver_system"]
       interval: 10s
@@ -24,6 +26,8 @@ services:
       - "6379:6379"
     volumes:
       - caregiver_redis_data:/data
+    networks:
+      - caregiver
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -33,3 +37,8 @@ services:
 volumes:
   caregiver_postgres_data:
   caregiver_redis_data:
+
+networks:
+  caregiver:
+    name: caregiver
+    driver: bridge

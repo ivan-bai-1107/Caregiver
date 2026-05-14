@@ -4,8 +4,9 @@
 
 ## 目录
 
-- `App/`：Vite + React + TypeScript 前端
-- `backend/`：FastAPI + SQLAlchemy 2.x + Alembic 后端
+- `client/`：Vite + React + TypeScript 客户端壳、前台页面、共享组件与路由
+- `admin/`：后台管理前端模块，挂载在客户端的 `/admin/*` 路由下
+- `server/`：FastAPI + SQLAlchemy 2.x + Alembic 后端
 
 当前已接入真实后端的主模块：
 
@@ -18,7 +19,7 @@
 ## 前端启动
 
 ```powershell
-cd App
+cd client
 pnpm install
 pnpm dev --host 127.0.0.1
 ```
@@ -26,11 +27,18 @@ pnpm dev --host 127.0.0.1
 前端地址：
 
 - http://127.0.0.1:5173/
+- 局域网访问时使用当前机器 IP，例如 http://192.168.3.179:5173/
+
+前端默认会请求同一 host 的 `8000` 端口作为后端；也可以在 `client/.env.local` 覆盖：
+
+```env
+VITE_API_BASE_URL=http://192.168.3.179:8000
+```
 
 ## 后端启动
 
 ```powershell
-cd backend
+cd server
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -142,7 +150,7 @@ EMAIL_DEBUG_CODE=true
 
 这样 `POST /api/auth/email/send-code` 会返回 `debugCode`，smoke test 不依赖真实邮箱。
 
-真实发送 QQ 邮箱验证码时，在本地 `backend/.env` 中配置：
+真实发送 QQ 邮箱验证码时，在本地 `server/.env` 中配置：
 
 ```env
 EMAIL_PROVIDER=smtp
@@ -158,26 +166,26 @@ EMAIL_DEBUG_CODE=false
 EMAIL_SEND_TIMEOUT_SECONDS=10
 ```
 
-`SMTP_PASSWORD` 是 QQ 邮箱里生成的 SMTP 授权码，不是 QQ 登录密码。不要提交 `backend/.env`，也不要把邮箱授权码、DeepSeek key 写入 README、测试脚本或前端环境变量。
+`SMTP_PASSWORD` 是 QQ 邮箱里生成的 SMTP 授权码，不是 QQ 登录密码。不要提交 `server/.env`，也不要把邮箱授权码、DeepSeek key 写入 README、测试脚本或前端环境变量。
 
 ## Alembic
 
 ```powershell
-cd backend
+cd server
 alembic upgrade head
 ```
 
 新增迁移时：
 
 ```powershell
-cd backend
+cd server
 alembic revision --autogenerate -m "message"
 ```
 
 ## Seed 数据
 
 ```powershell
-cd backend
+cd server
 python scripts/seed.py
 ```
 
@@ -195,7 +203,7 @@ Seed 还会写入知识分类、知识文章、社区帖子和评论，用于可
 
 ## 前端切真实后端
 
-默认前端可回退到 Apifox Mock。切真实后端时，在 `App/.env.local` 写入：
+默认前端可回退到 Apifox Mock。切真实后端时，在 `client/.env.local` 写入：
 
 ```env
 VITE_API_BASE_URL=http://127.0.0.1:8000
@@ -211,18 +219,18 @@ VITE_API_BASE_URL=http://127.0.0.1:8000
 
 - `DEEPSEEK_API_KEY` 为空时自动走 fallback。
 - `AI_USE_REAL_MODEL=false` 时强制走 fallback。
-- `DEEPSEEK_MODEL` 可在 `backend/.env` 中调整。
+- `DEEPSEEK_MODEL` 可在 `server/.env` 中调整。
 - DeepSeek 不可用、超时、返回非严格 JSON 或结构校验失败时自动 fallback。
 - AI 生成的 record/task 只作为草稿返回，必须在前端确认页核对后才会保存。
 
-真实 key 只能放在 `backend/.env`，不要提交到代码、README、测试脚本或前端环境变量。
+真实 key 只能放在 `server/.env`，不要提交到代码、README、测试脚本或前端环境变量。
 
 ## API Smoke Test
 
 后端启动、迁移和 seed 完成后运行：
 
 ```powershell
-cd backend
+cd server
 python scripts/api_smoke_test.py
 ```
 
