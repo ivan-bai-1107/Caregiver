@@ -281,9 +281,6 @@ export function HealthTrendPage() {
                     </span>
                   ) : null}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {analysis?.generatedBy === "deepseek" ? "DeepSeek 分析 · Redis 缓存" : "本地兜底分析 · Redis 缓存"}
-                </p>
               </div>
             </div>
           </div>

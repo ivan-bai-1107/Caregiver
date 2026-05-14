@@ -28,3 +28,4 @@ def trend_analysis_cache_pattern(user_id: str, patient_id: str) -> str:
 
 def invalidate_trend_analysis_cache(user_id: str, patient_id: str) -> None:
     redis_delete_pattern(trend_analysis_cache_pattern(user_id, patient_id))
+    redis_delete_pattern(f"cache:trend:data:{user_id}:{patient_id}:*")

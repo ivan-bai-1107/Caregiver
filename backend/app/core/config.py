@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     email_from_name: str = Field(default="Caregiver 护理助手", validation_alias="EMAIL_FROM_NAME")
     email_debug_code: bool = Field(default=True, validation_alias="EMAIL_DEBUG_CODE")
     email_send_timeout_seconds: int = Field(default=10, validation_alias="EMAIL_SEND_TIMEOUT_SECONDS")
+    content_moderation_enabled: bool = Field(default=True, validation_alias="CONTENT_MODERATION_ENABLED")
+    content_moderation_base_url: str = Field(
+        default="https://v1.apizero.cn",
+        validation_alias="CONTENT_MODERATION_BASE_URL",
+    )
+    content_moderation_path: str = Field(default="/api/content-moderation", validation_alias="CONTENT_MODERATION_PATH")
+    content_moderation_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="CONTENT_MODERATION_API_KEY")
+    content_moderation_timeout_seconds: int = Field(default=10, validation_alias="CONTENT_MODERATION_TIMEOUT_SECONDS")
     cors_origins: list[str] = [
         "http://127.0.0.1:5173",
         "http://localhost:5173",

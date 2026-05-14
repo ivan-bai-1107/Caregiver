@@ -78,6 +78,7 @@ export function KnowledgeDetailPage() {
           <button onClick={() => navigate("/knowledge")} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6" />
           </button>
+          <h1 className="text-xl">文章详情</h1>
           <div className="w-10" />
         </div>
       </div>

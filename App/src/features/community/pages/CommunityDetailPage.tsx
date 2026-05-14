@@ -1,9 +1,7 @@
 import { useNavigate, useParams } from "react-router";
 import {
   ArrowLeft,
-  Bookmark,
   ChevronRight,
-  Flag,
   MessageCircle,
   ThumbsUp,
   User,
@@ -29,8 +27,6 @@ export function CommunityDetailPage() {
     setCommentText,
     retry,
     like,
-    toggleBookmark,
-    report,
     submitComment,
   } = useCommunityDetailState(id);
 
@@ -45,32 +41,14 @@ export function CommunityDetailPage() {
     }
   }
 
-  async function handleBookmark() {
-    try {
-      await toggleBookmark();
-      toast.success(post?.isBookmarked ? "已取消收藏" : "已收藏");
-    } catch {
-      toast.error("收藏操作失败，请稍后重试");
-    }
-  }
-
-  async function handleReport() {
-    try {
-      await report("用户从帖子详情页举报");
-      toast.success("举报已提交，后台会尽快处理");
-    } catch {
-      toast.error("举报提交失败，请稍后重试");
-    }
-  }
-
   async function handleSubmitComment() {
     try {
       const comment = await submitComment();
       if (comment) {
-        toast.success("评论已提交审核");
+        toast.success("评论已发布");
       }
     } catch {
-      toast.error("评论提交失败，请稍后重试");
+      toast.error("评论包含敏感信息或提交失败，请修改后重试");
     }
   }
 
@@ -83,28 +61,7 @@ export function CommunityDetailPage() {
             <ArrowLeft className="w-6 h-6" />
           </button>
           <h1 className="text-xl">帖子详情</h1>
-          <div className="flex items-center gap-1">
-            {post ? (
-              <button
-                onClick={() => void handleBookmark()}
-                disabled={isMutating}
-                className="p-2 disabled:opacity-50"
-                aria-label="收藏帖子"
-              >
-                <Bookmark className={`w-5 h-5 ${post.isBookmarked ? "fill-current" : ""}`} />
-              </button>
-            ) : null}
-            {post ? (
-              <button
-                onClick={() => void handleReport()}
-                disabled={isMutating}
-                className="p-2 disabled:opacity-50"
-                aria-label="举报帖子"
-              >
-                <Flag className="w-5 h-5" />
-              </button>
-            ) : null}
-          </div>
+          <div className="w-10" />
         </div>
       </div>
 
@@ -282,7 +239,7 @@ export function CommunityDetailPage() {
                 value={commentText}
                 onChange={(event) => setCommentText(event.target.value)}
                 className="flex-1 px-4 py-3 bg-input-background rounded-2xl border border-transparent focus:border-primary focus:outline-none transition-colors"
-                placeholder="写下你的评论，提交后进入审核"
+                placeholder="写下你的评论"
               />
               <button
                 onClick={() => void handleSubmitComment()}

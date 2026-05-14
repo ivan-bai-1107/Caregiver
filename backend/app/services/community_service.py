@@ -22,6 +22,11 @@ from app.schemas.community import (
     ReviewStatus,
 )
 from app.services.cache_service import invalidate_admin_dashboard_cache
+from app.services.content_moderation_service import (
+    ContentModerationError,
+    ContentRejectedError,
+    moderate_text_or_raise,
+)
 
 
 def to_author(user: User) -> CommunityAuthor:
@@ -167,7 +172,7 @@ def list_comments(db: Session, user: User, post_id: str) -> list[CommunityCommen
         select(CommunityComment)
         .where(
             CommunityComment.post_id == post_id,
-            or_(CommunityComment.status == "passed", CommunityComment.author_id == user.id),
+            CommunityComment.status == "passed",
         )
         .options(selectinload(CommunityComment.author))
         .order_by(CommunityComment.created_at.asc())
@@ -177,13 +182,23 @@ def list_comments(db: Session, user: User, post_id: str) -> list[CommunityCommen
 
 def create_comment(db: Session, user: User, post_id: str, payload: CommunityCommentCreate) -> CommunityCommentOut:
     get_post_or_404(db, user, post_id)
+    try:
+        moderate_text_or_raise(payload.content)
+    except ContentRejectedError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except ContentModerationError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+
     comment = CommunityComment(
         post_id=post_id,
         author_id=user.id,
         content=payload.content,
-        status="pending",
+        status="passed",
     )
     db.add(comment)
+    post = db.scalar(select(CommunityPost).where(CommunityPost.id == post_id))
+    if post is not None:
+        post.comment_count += 1
     db.commit()
     db.refresh(comment)
     db.refresh(comment, attribute_names=["author"])

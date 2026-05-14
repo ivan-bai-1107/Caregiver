@@ -28,6 +28,7 @@ METRIC_TYPE_MAP = {
 }
 
 TREND_ANALYSIS_TTL_SECONDS = 60 * 60 * 24
+TREND_DATA_TTL_SECONDS = 60 * 10
 
 TREND_ANALYSIS_SYSTEM_PROMPT = """你是医疗照顾者系统里的护理趋势分析助手。
 你只能基于给定的结构化趋势数据做护理观察总结，不能做医疗诊断，不能替代医生。
@@ -59,6 +60,11 @@ def get_metric_trend(
     end_at: datetime | None,
 ) -> TrendSeries:
     patient = get_patient_or_404(db, user, patient_id)
+    cache_key = trend_data_cache_key(user.id, patient.id, metric_type, start_at, end_at)
+    cached = redis_get_json(cache_key)
+    if isinstance(cached, dict):
+        return TrendSeries.model_validate(cached)
+
     metric_key = METRIC_TYPE_MAP.get(metric_type, metric_type)
     statement = (
         select(CareRecord.occurred_at, CareMetric.value_numeric)
@@ -76,7 +82,7 @@ def get_metric_trend(
         statement = statement.where(CareRecord.occurred_at <= end_at)
 
     rows = db.execute(statement).all()
-    return TrendSeries(
+    series = TrendSeries(
         patient_id=patient.id,
         metric_type=metric_type,
         points=[
@@ -84,9 +90,11 @@ def get_metric_trend(
             for occurred_at, value_numeric in rows
         ],
     )
+    redis_set_json(cache_key, TREND_DATA_TTL_SECONDS, series.model_dump(mode="json", by_alias=True))
+    return series
 
 
-def trend_analysis_cache_key(
+def trend_cache_digest(
     user_id: str,
     patient_id: str,
     metric_type: str,
@@ -103,7 +111,29 @@ def trend_analysis_cache_key(
         sort_keys=True,
     )
     digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
+    return digest
+
+
+def trend_analysis_cache_key(
+    user_id: str,
+    patient_id: str,
+    metric_type: str,
+    start_at: datetime | None,
+    end_at: datetime | None,
+) -> str:
+    digest = trend_cache_digest(user_id, patient_id, metric_type, start_at, end_at)
     return f"cache:trend:analysis:{user_id}:{patient_id}:{digest}"
+
+
+def trend_data_cache_key(
+    user_id: str,
+    patient_id: str,
+    metric_type: str,
+    start_at: datetime | None,
+    end_at: datetime | None,
+) -> str:
+    digest = trend_cache_digest(user_id, patient_id, metric_type, start_at, end_at)
+    return f"cache:trend:data:{user_id}:{patient_id}:{digest}"
 
 
 def get_metric_points(
@@ -327,5 +357,5 @@ def get_trend_analysis(
         except (DeepSeekServiceError, ValueError, TypeError, KeyError):
             analysis = build_fallback_analysis(patient.id, metric_type, analysis_data)
 
-    redis_set_json(cache_key, TREND_ANALYSIS_TTL_SECONDS, analysis.model_dump(by_alias=True))
+    redis_set_json(cache_key, TREND_ANALYSIS_TTL_SECONDS, analysis.model_dump(mode="json", by_alias=True))
     return analysis

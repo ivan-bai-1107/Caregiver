@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {
-  AlertTriangle,
   ArrowLeft,
   Bot,
   CheckSquare,
   ChevronRight,
   FileText,
   HelpCircle,
-  Loader2,
   Mic,
   Send,
   Sparkles,
@@ -16,7 +14,7 @@ import {
 } from "lucide-react";
 import type { AIAssistantResponse, AIDraftPayload, AIDraftType, AIIntent } from "@/entities/ai/model";
 import { aiDraftTypeLabels } from "@/entities/ai/mapper";
-import { sendAssistantMessage, storeAIDraft } from "@/features/ai/services/assistant.service";
+import { sendAssistantMessageStream, storeAIDraft } from "@/features/ai/services/assistant.service";
 
 type MessageRole = "user" | "ai";
 
@@ -170,14 +168,43 @@ export function AIAssistantPage() {
     setError(null);
     setIsSending(true);
 
+    const aiMessageId = genMessageId();
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      {
+        id: aiMessageId,
+        role: "ai",
+        content: "",
+        timestamp: new Date(),
+      },
+    ]);
+
     try {
-      const response = await sendAssistantMessage({
+      const response = await sendAssistantMessageStream({
         message,
         conversationId,
+      }, (delta) => {
+        setMessages((currentMessages) =>
+          currentMessages.map((item) =>
+            item.id === aiMessageId ? { ...item, content: item.content + delta } : item,
+          ),
+        );
       });
       setConversationId(response.conversationId);
-      setMessages((currentMessages) => [...currentMessages, toAiMessage(response)]);
+      setMessages((currentMessages) =>
+        currentMessages.map((item) =>
+          item.id === aiMessageId
+            ? {
+                ...toAiMessage(response),
+                id: aiMessageId,
+                content: item.content || response.answerText,
+                timestamp: item.timestamp,
+              }
+            : item,
+        ),
+      );
     } catch {
+      setMessages((currentMessages) => currentMessages.filter((item) => item.id !== aiMessageId));
       setError("AI 助手暂时不可用，请稍后重试。");
     } finally {
       setIsSending(false);
@@ -309,14 +336,6 @@ export function AIAssistantPage() {
                 );
               })}
             </div>
-            <div className="w-full bg-muted/30 rounded-xl p-3 border border-border">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-3.5 h-3.5 text-accent flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  AI 回复仅供护理参考，不构成医疗诊断建议。护理记录和任务必须核对确认后再保存。
-                </p>
-              </div>
-            </div>
           </div>
         ) : null}
 
@@ -378,12 +397,6 @@ export function AIAssistantPage() {
                       </div>
                     ) : null}
 
-                    {message.generatedBy ? (
-                      <div className="inline-flex rounded-lg bg-primary/10 px-2.5 py-1 text-xs text-primary">
-                        {message.generatedBy === "deepseek" ? "DeepSeek" : "本地兜底"}
-                      </div>
-                    ) : null}
-
                     {message.sources && message.sources.length > 0 ? (
                       <div className="bg-muted/30 rounded-xl px-3 py-2.5">
                         {message.sources.map((source) => (
@@ -394,28 +407,12 @@ export function AIAssistantPage() {
                       </div>
                     ) : null}
 
-                    {message.riskNote ? (
-                      <div className="flex items-start gap-2 bg-accent/5 border border-accent/15 rounded-xl px-3 py-2.5">
-                        <AlertTriangle className="w-3.5 h-3.5 text-accent flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-foreground/60 leading-relaxed">{message.riskNote}</p>
-                      </div>
-                    ) : null}
                   </div>
                 </div>
               )}
             </div>
           ))}
 
-          {isSending ? (
-            <div className="flex gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-primary" />
-              </div>
-              <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3">
-                <Loader2 className="w-4 h-4 text-primary animate-spin" />
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
 
@@ -457,6 +454,9 @@ export function AIAssistantPage() {
             <Send className="w-4 h-4" />
           </button>
         </div>
+        <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
+          AI 回复仅供护理参考，不构成医疗诊断建议；护理记录和任务请核对后再保存。
+        </p>
       </div>
     </div>
   );
