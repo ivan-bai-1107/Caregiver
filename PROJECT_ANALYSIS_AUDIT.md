@@ -210,22 +210,111 @@ pnpm build
 6. Community 本轮确认了发帖、评论、点赞、收藏、举报，但未确认关注、评论回复、评论点赞等高级社交能力；论文中应作为后续扩展。
 7. Profile service 有头像上传接口，但还需后续读后端 users 路由确认文件保存方式和大小限制。
 
-## 3. 下一轮计划：后台管理端粗读
+## 3. 第三轮：后台管理端粗读
+
+### 3.1 本轮读取范围
+
+本轮重点读取了后台管理端 `admin/src/admin` 和后台布局文件，已确认以下内容：
+
+| 文件 | 作用 |
+| --- | --- |
+| `admin/src/admin/model.ts` | 后台 DTO、状态枚举、表单草稿类型、标签映射 |
+| `admin/src/admin/services/admin.service.ts` | 后台 API service、admin token localStorage 存取、admin 请求鉴权头 |
+| `admin/src/admin/pages/AdminLoginPage.tsx` | 管理员登录页 |
+| `admin/src/admin/state/useAdminAuthState.ts` | 管理员登录状态与错误提示 |
+| `client/src/app/components/AdminLayout.tsx` | 后台布局、导航、管理员信息加载、前端鉴权守卫、退出登录 |
+| `admin/src/admin/pages/AdminDashboardPage.tsx` | 后台 Dashboard 统计页 |
+| `admin/src/admin/state/useAdminDashboardState.ts` | Dashboard 数据加载状态 |
+| `admin/src/admin/pages/AdminUsersPage.tsx` | 用户管理页 |
+| `admin/src/admin/state/useAdminUsersState.ts` | 用户列表、搜索、前端状态筛选、禁用/启用状态 |
+| `admin/src/admin/pages/AdminReviewsPage.tsx` | 社区帖子审核页 |
+| `admin/src/admin/state/useAdminReviewsState.ts` | 审核列表、状态切换、通过/拒绝 |
+| `admin/src/admin/pages/AdminContentPage.tsx` | 知识内容管理页 |
+| `admin/src/admin/state/useAdminContentState.ts` | 文章列表、分类、创建、编辑、上下架 |
+| `admin/src/admin/pages/AdminPromptPage.tsx` | Prompt 模板管理页 |
+| `admin/src/admin/pages/AdminAILogPage.tsx` | AI 日志管理页 |
+| `admin/src/admin/state/useAdminAiLogsState.ts` | AI 日志列表、意图筛选和详情弹窗状态 |
+
+### 3.2 后台 service 与 admin token 结论
+
+`admin.service.ts` 明确使用独立存储键：
+
+```text
+care-app-admin-token
+```
+
+后台请求不会复用普通用户的 `care-app-auth-token`，而是通过 `adminOptions()` 在请求头中显式添加管理员 token。这说明系统前台用户和后台管理员身份在前端存储层已经分离。
+
+后台 service 已封装以下 API：
+
+| 能力 | service 函数 | API |
+| --- | --- | --- |
+| 管理员登录 | `loginAdmin` | `POST /api/admin/auth/login` |
+| 当前管理员 | `getAdminMe` | `GET /api/admin/me` |
+| Dashboard | `getAdminDashboardSummary` | `GET /api/admin/dashboard/summary` |
+| 用户列表 | `listAdminUsers` | `GET /api/admin/users` |
+| 用户状态 | `updateAdminUserStatus` | `PUT /api/admin/users/{id}/status` |
+| 审核帖子 | `listAdminReviewPosts` / `updateAdminReviewPost` | `/api/admin/reviews/posts` |
+| 知识分类 | `listAdminKnowledgeCategories` | `GET /api/admin/knowledge/categories` |
+| 知识文章 | `list/create/update/updateStatus` | `/api/admin/knowledge/articles` |
+| Prompt 模板 | `listAdminPrompts` / `updateAdminPrompt` | `/api/admin/prompts` |
+| AI 日志 | `listAdminAiLogs` / `getAdminAiLog` | `/api/admin/ai-logs` |
+
+### 3.3 后台鉴权与布局结论
+
+`AdminLayout` 在挂载时先检查 `getAdminToken()`。如果不存在 token，会跳转 `/admin/login`；如果存在 token，则调用 `getAdminMe()` 验证管理员身份。如果验证失败，会清理 admin token 并跳回登录页。
+
+这说明后台端具备前端侧路由守卫，但真正安全性仍依赖后端 admin API 的鉴权依赖。论文中可写为：后台前端提供管理员 token 校验和路由守卫，后端提供真实权限校验。
+
+### 3.4 后台模块审计表
+
+| 模块 | 页面/入口 | 前端实现状态 | 主要 API | 论文表述建议 |
+| --- | --- | --- | --- | --- |
+| Admin Auth | `/admin/login` | 管理员邮箱密码登录，登录成功保存独立 admin token，并跳转 dashboard | `/api/admin/auth/login`、`/api/admin/me` | 可写为“后台管理员独立登录与鉴权”，不要和普通用户登录混为一谈 |
+| Admin Layout | `/admin/*` | 前端侧检查 admin token，并请求 `getAdminMe` 验证；失败会清 token 并跳转登录页 | `/api/admin/me` | 可写为“前端路由守卫 + 后端鉴权验证” |
+| Dashboard | `/admin/dashboard` | 真实调用 dashboard summary，展示用户、患者、记录、任务、知识、AI 日志和待审核信息 | `/api/admin/dashboard/summary` | 可写为“后台运营统计仪表盘”，不要夸大为复杂数据分析平台 |
+| Users | `/admin/users` | 真实拉取用户列表，支持关键词查询、启用/禁用。状态筛选目前在前端本地完成 | `/api/admin/users`、`/api/admin/users/{id}/status` | 可写为“用户列表与状态管理”；不要写用户详情、批量操作或复杂权限分组 |
+| Reviews | `/admin/reviews` | 当前实现为社区帖子审核，支持 pending/passed/rejected 切换、预览、通过、拒绝并填写原因 | `/api/admin/reviews/posts`、`/api/admin/reviews/posts/{id}` | 可写为“社区帖子审核”；不要写成评论审核已完整前端化，除非后端轮次和页面确认 |
+| Content | `/admin/content` | 知识文章列表、搜索、本地关键词过滤、新增、编辑、上架/下架；支持 article/video 类型和 videoUrl | `/api/admin/knowledge/categories`、`/api/admin/knowledge/articles` | 可写为“知识内容管理”；不要写删除文章、富文本编辑、文件上传封面等未确认能力 |
+| Prompt | `/admin/prompts` | 当前是真实 Prompt 模板列表、选择、编辑、保存页面，不是单纯预留页 | `/api/admin/prompts`、`/api/admin/prompts/{id}` | 可写为“Prompt 模板管理”；但后续必须在后端 AI 服务轮次确认这些模板是否实际参与 DeepSeek/RAG 调用 |
+| AI Logs | `/admin/ai-logs` | 真实拉取 AI 日志列表，支持按 intent 筛选，支持本地详情弹窗查看输入、回复、草稿 JSON、风险提示 | `/api/admin/ai-logs`、`/api/admin/ai-logs/{id}` | 可写为“AI 调用日志审计”；不要写复杂告警、统计报表或日志导出 |
+
+### 3.5 本轮确认的实现亮点
+
+1. **后台 token 与前台 token 分离**：使用 `care-app-admin-token` 独立存储，后台请求显式携带 admin token。
+2. **后台路由守卫已存在**：`AdminLayout` 会验证 token 和 `getAdminMe()`，失败时回登录页。
+3. **后台主要模块均已 API 化**：Dashboard、用户、审核、内容、Prompt、AI 日志都通过 service 调后端接口。
+4. **社区审核实现较完整**：支持查看、通过、拒绝和拒绝原因输入。
+5. **知识内容管理具备基础 CMS 能力**：支持创建、编辑、状态切换、文章/视频类型和 videoUrl。
+6. **AI 日志可审计草稿 JSON**：后台可查看用户输入、AI 回复、draftPayload 和风险提示，这一项可作为论文亮点。
+
+### 3.6 本轮发现的问题与谨慎表述点
+
+1. `useAdminAuthState` 中管理员邮箱默认填入 `admin@example.com`，这属于演示便利，不应写成安全特性。
+2. 用户管理的状态筛选是前端本地过滤；`listAdminUsers` 只传了 keyword、page、pageSize，没有把 status 传给后端。论文可写“支持状态筛选”，但从实现角度属于前端筛选。
+3. 用户管理页未看到用户详情弹窗、角色分配、批量操作等能力；论文不应写这些。
+4. 审核页面当前只确认了社区帖子审核；虽然 service/model 中有 pendingCommentCount 等统计字段，但前端审核页未读到评论审核 tab，论文中应写“社区内容审核以帖子审核为主”。
+5. 内容管理没有删除文章、富文本编辑器、封面上传等高级 CMS 能力，只有基础表单编辑。
+6. Prompt 管理页面已经是真实编辑页面，但其实际影响范围需要后端 AI 服务轮次进一步确认；不能只凭页面文案断言“保存后一定影响所有 AI 场景”。
+7. AI 日志详情弹窗使用列表中的 log 对象，不一定重新调用 `getAdminAiLog`；service 有详情 API，但页面当前主要用本地 selectedLog 展示。论文可写“支持查看详情”，但不宜强调“每次详情均二次拉取后端”。
+
+## 4. 下一轮计划：后端 API 粗读
 
 下一轮读取范围：
 
 | 范围 | 目标 |
 | --- | --- |
-| `admin/src/admin/model.ts` | 后台 DTO、状态枚举、表单草稿定义 |
-| `admin/src/admin/services/admin.service.ts` | 后台 API 封装、admin token 存储、请求鉴权方式 |
-| `admin/src/admin/state/*` | Dashboard、用户、审核、内容、Prompt、AI 日志状态逻辑 |
-| `admin/src/admin/pages/AdminLoginPage.tsx` | 管理员登录 |
-| `admin/src/admin/pages/AdminDashboardPage.tsx` | 后台统计与快捷入口 |
-| `admin/src/admin/pages/AdminUsersPage.tsx` | 用户管理 |
-| `admin/src/admin/pages/AdminReviewsPage.tsx` | 社区审核 |
-| `admin/src/admin/pages/AdminContentPage.tsx` | 知识内容管理 |
-| `admin/src/admin/pages/AdminPromptPage.tsx` | Prompt 管理实现还是预留 |
-| `admin/src/admin/pages/AdminAILogPage.tsx` | AI 日志查询和详情 |
-| `client/src/app/components/AdminLayout.tsx` | 后台布局与是否有前端鉴权守卫 |
+| `server/app/api/routes/auth.py` | 邮箱验证码、注册、登录、重置密码、logout、限流、SMTP 调用入口 |
+| `server/app/api/routes/users.py` | 当前用户、头像、统计、通知设置、偏好设置 |
+| `server/app/api/routes/home.py` | 首页 summary 聚合 |
+| `server/app/api/routes/patients.py` | 患者 CRUD 和 dashboard |
+| `server/app/api/routes/records.py` | 护理记录 CRUD 与 metrics 写入 |
+| `server/app/api/routes/tasks.py` | 护理任务 CRUD 与完成接口 |
+| `server/app/api/routes/trends.py` | 趋势 series 与 trend-analysis |
+| `server/app/api/routes/ai.py` | AI 普通接口、流式接口、限流、日志写入 |
+| `server/app/api/routes/knowledge.py` | 知识分类、文章、浏览、点赞、收藏、相关推荐 |
+| `server/app/api/routes/community.py` | 社区帖子、评论、点赞、收藏、举报、审核状态 |
+| `server/app/api/routes/admin.py` | 后台所有管理接口，与本轮后台前端对齐 |
+| `server/app/api/routes/care.py` | 照护工作台聚合接口 |
 
-下一轮输出目标：形成“后台管理端模块审计表”，确认后台页面是否真实接 API，是否存在预留/降级功能，是否适合写入论文后台管理章节。
+下一轮输出目标：形成“后端 API 模块审计表”，确认前端已调用的接口是否真实存在，哪些接口有 Redis/SMTP/AI/权限逻辑，哪些 README 或前端描述需要修正。
