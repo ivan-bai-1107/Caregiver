@@ -9,6 +9,7 @@ import {
   FileText,
   HelpCircle,
   Loader2,
+  Mic,
   Send,
   Sparkles,
   User,
@@ -106,23 +107,50 @@ function toAiMessage(response: AIAssistantResponse): ChatMessage {
     draftType: response.draftType,
     draftPayload: response.draftPayload,
     sources: response.sources,
-    riskNote: response.riskNote,
+    riskNote: normalizeRiskNote(response.riskNote),
     generatedBy: response.generatedBy,
   };
+}
+
+function normalizeRiskNote(value?: string) {
+  const text = value?.trim() ?? "";
+  const normalized = text.toLowerCase();
+  if (!text || ["无", "暂无", "没有", "none", "null", "n/a", "na"].includes(normalized)) {
+    return undefined;
+  }
+  return text;
 }
 
 export function AIAssistantPage() {
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<{
+    start: () => void;
+    stop: () => void;
+    abort: () => void;
+    lang: string;
+    interimResults: boolean;
+    continuous: boolean;
+    onresult: ((event: any) => void) | null;
+    onerror: (() => void) | null;
+    onend: (() => void) | null;
+  } | null>(null);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isSending]);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.abort();
+    };
+  }, []);
 
   async function handleSend(text?: string) {
     const message = (text ?? input).trim();
@@ -169,6 +197,48 @@ export function AIAssistantPage() {
       riskNote: message.riskNote ?? "请核对 AI 草稿后再确认保存。",
     });
     navigate(`/ai-confirm?type=${draftType}`);
+  }
+
+  function handleVoiceInput() {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setError("当前浏览器不支持语音输入，请使用 Chrome 或手动输入。");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "zh-CN";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results ?? [])
+        .map((result: any) => result?.[0]?.transcript ?? "")
+        .join("")
+        .trim();
+
+      if (transcript) {
+        setInput((current) => `${current}${current ? " " : ""}${transcript}`);
+      }
+    };
+    recognition.onerror = () => {
+      setError("语音识别失败，请重新尝试或手动输入。");
+      setIsListening(false);
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+    recognitionRef.current = recognition;
+    setError(null);
+    setIsListening(true);
+    recognition.start();
   }
 
   const isEmpty = messages.length === 0 && !isSending;
@@ -334,9 +404,21 @@ export function AIAssistantPage() {
         </div>
       </div>
 
-      <div className="px-4 py-3 border-t border-border bg-card flex-shrink-0">
+      <div className="mobile-fixed-page-footer border-t border-border bg-card">
         {error ? <p className="text-xs text-accent mb-2">{error}</p> : null}
         <div className="flex items-end gap-2">
+          <button
+            onClick={handleVoiceInput}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+              isListening
+                ? "bg-accent text-accent-foreground"
+                : "bg-primary/10 text-primary hover:bg-primary/20"
+            }`}
+            aria-label={isListening ? "停止语音输入" : "开始语音输入"}
+            type="button"
+          >
+            <Mic className="w-4 h-4" />
+          </button>
           <textarea
             value={input}
             onChange={(event) => setInput(event.target.value)}
@@ -347,13 +429,15 @@ export function AIAssistantPage() {
               }
             }}
             className="flex-1 px-4 py-3 bg-input-background rounded-2xl border border-transparent focus:border-primary focus:outline-none transition-colors resize-none text-sm"
-            placeholder="输入护理需求或问题..."
+            placeholder="输入护理需求，或点麦克风语音输入..."
             rows={1}
           />
           <button
             onClick={() => void handleSend()}
             disabled={!input.trim() || isSending}
             className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label="发送"
+            type="button"
           >
             <Send className="w-4 h-4" />
           </button>

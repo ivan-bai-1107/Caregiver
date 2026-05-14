@@ -213,4 +213,9 @@
     display: block;
     height: calc(5.75rem + env(safe-area-inset-bottom));
   }
+
+  .mobile-fixed-page-footer {
+    flex-shrink: 0;
+    padding: 0.75rem 1rem calc(5.75rem + env(safe-area-inset-bottom));
+  }
 }
