@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, BookOpen, ChevronRight, Clock, Eye, Heart, Share2, User } from "lucide-react";
 import { Toaster, toast } from "sonner";
@@ -41,6 +42,7 @@ function renderContent(content: string) {
 export function KnowledgeDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const bodyRef = useRef<HTMLDivElement | null>(null);
   const {
     article,
     relatedArticles,
@@ -50,6 +52,10 @@ export function KnowledgeDetailPage() {
     retry,
     like,
   } = useKnowledgeDetailState(id);
+
+  useEffect(() => {
+    bodyRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, [id]);
 
   async function handleShare() {
     if (!article) {
@@ -83,7 +89,7 @@ export function KnowledgeDetailPage() {
         </div>
       </div>
 
-      <div className="mobile-fixed-page-body px-6 py-6 pb-12">
+      <div ref={bodyRef} className="mobile-fixed-page-body px-6 py-6 pb-12">
         {isLoading ? (
           <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
             知识文章加载中...
