@@ -1,5 +1,6 @@
 import base64
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import HTTPException, status
@@ -64,7 +65,8 @@ def update_user_avatar(db: Session, user: User, payload: UserAvatarUpdate) -> Us
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="头像图片不能超过 2MB。")
 
     AVATAR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    filename = f"{user.id}.{extension}"
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    filename = f"{user.id}_{timestamp}.{extension}"
     file_path = AVATAR_UPLOAD_DIR / filename
     file_path.write_bytes(image_bytes)
 

@@ -12,11 +12,13 @@ import {
   Info,
 } from "lucide-react";
 import { logout } from "@/features/auth/services/auth.service";
+import { resolveProfileMediaUrl } from "@/features/profile/services/profile.service";
 import { useProfilePageState } from "@/features/profile/state/useProfilePageState";
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const { profile, stats, isLoading, error, retry } = useProfilePageState();
+  const avatarUrl = resolveProfileMediaUrl(profile?.avatarUrl ?? "");
 
   const menuSections = [
     {
@@ -42,8 +44,12 @@ export function ProfilePage() {
     <div className="mobile-fixed-page bg-background">
       <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl flex-shrink-0">
-            {profile?.username.slice(0, 1) || "用"}
+          <div className="w-20 h-20 overflow-hidden rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl flex-shrink-0">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="用户头像" className="h-full w-full object-cover" />
+            ) : (
+              profile?.username.slice(0, 1) || "用"
+            )}
           </div>
           <div className="flex-1">
             <h1 className="text-xl mb-0.5" style={{ fontFamily: "var(--font-display)" }}>
