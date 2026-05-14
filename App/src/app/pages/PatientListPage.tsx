@@ -10,8 +10,8 @@ export function PatientListPage() {
   const statusConfig = { color: "bg-primary/10 text-primary", label: "已接入" };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
+    <div className="mobile-fixed-page bg-background">
+      <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
         <h1 className="text-2xl mb-4" style={{ fontFamily: "var(--font-display)" }}>
           我的患者
         </h1>
@@ -27,7 +27,7 @@ export function PatientListPage() {
         </div>
       </div>
 
-      <div className="px-6 py-6 space-y-4">
+      <div className="mobile-fixed-page-body px-6 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">共 {totalCount} 位患者</p>
           <button

@@ -73,8 +73,8 @@ export function PatientDetailPage() {
   const changePrefix = detailView.trendPreview.changePercent > 0 ? "+" : "";
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
+    <div className="mobile-fixed-page bg-background">
+      <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
         <div className="flex items-center justify-between mb-5">
           <button onClick={() => navigate(appRoutes.patients)} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6" />
@@ -124,6 +124,7 @@ export function PatientDetailPage() {
         </div>
       </div>
 
+      <div className="mobile-fixed-page-body">
       <PatientDetailTabs activeTab={activeTab} onChange={setActiveTab} />
 
       <div className="px-6 py-6 pb-28">
@@ -400,6 +401,7 @@ export function PatientDetailPage() {
             </div>
           </div>
         ) : null}
+      </div>
       </div>
 
       <button

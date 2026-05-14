@@ -143,9 +143,9 @@ export function CareWorkflowPage() {
   }
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} className="min-h-screen bg-background">
+    <div className="mobile-fixed-page bg-background">
       <Toaster position="top-center" richColors />
-      <div className="bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
+      <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl" style={{ fontFamily: "var(--font-display)" }}>
             照护工作台
@@ -200,6 +200,7 @@ export function CareWorkflowPage() {
         </div>
       </div>
 
+      <PullToRefresh onRefresh={handleRefresh} className="mobile-fixed-page-body">
       <div className="bg-card border-b border-border px-4 sticky top-0 z-10">
         <div className="flex items-center">
           {tabs.map((tab) => {
@@ -405,6 +406,7 @@ export function CareWorkflowPage() {
           </div>
         ) : null}
       </div>
-    </PullToRefresh>
+      </PullToRefresh>
+    </div>
   );
 }

@@ -72,8 +72,8 @@ export function RecordListPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
+    <div className="mobile-fixed-page bg-background">
+      <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl" style={{ fontFamily: "var(--font-display)" }}>
             护理记录
@@ -122,6 +122,7 @@ export function RecordListPage() {
         </div>
       </div>
 
+      <div className="mobile-fixed-page-body">
       <div className="px-6 py-3 border-b border-border bg-card overflow-x-auto">
         <div className="flex items-center gap-2 min-w-max">
           {filterTabs.map((tab) => (
@@ -216,6 +217,7 @@ export function RecordListPage() {
             <p className="text-muted-foreground text-sm">暂无符合条件的记录</p>
           </div>
         ) : null}
+      </div>
       </div>
     </div>
   );

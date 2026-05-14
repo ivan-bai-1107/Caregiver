@@ -37,10 +37,10 @@ export function TaskListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="mobile-fixed-page bg-background">
       <Toaster position="top-center" richColors />
 
-      <div className="rounded-b-[2rem] bg-gradient-to-br from-primary to-primary/80 px-6 pb-6 pt-12 text-white">
+      <div className="mobile-fixed-page-header rounded-b-[2rem] bg-gradient-to-br from-primary to-primary/80 px-6 pb-6 pt-12 text-white">
         <div className="mb-5 flex items-center justify-between">
           <h1 className="text-2xl" style={{ fontFamily: "var(--font-display)" }}>
             护理任务
@@ -72,11 +72,12 @@ export function TaskListPage() {
         <TaskSummaryPanel summary={summary} />
       </div>
 
-      <TaskFilterTabs
-        activeFilter={activeFilter}
-        onChange={setActiveFilter}
-        tabs={filterTabs}
-      />
+      <div className="mobile-fixed-page-body">
+        <TaskFilterTabs
+          activeFilter={activeFilter}
+          onChange={setActiveFilter}
+          tabs={filterTabs}
+        />
 
       <div className="space-y-3 px-6 py-6">
         {patientFilterLabel ? (
@@ -130,6 +131,7 @@ export function TaskListPage() {
               <TaskCard key={task.id} onComplete={handleComplete} task={task} />
             ))
           : null}
+      </div>
       </div>
     </div>
   );

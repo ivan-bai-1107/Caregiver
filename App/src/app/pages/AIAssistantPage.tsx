@@ -172,8 +172,8 @@ export function AIAssistantPage() {
   const isEmpty = messages.length === 0 && !isSending;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col h-screen">
-      <div className="bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-5 flex-shrink-0 rounded-b-[2rem]">
+    <div className="mobile-fixed-page bg-background">
+      <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-5 rounded-b-[2rem]">
         <div className="flex items-center justify-between">
           <button onClick={() => navigate(-1)} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6" />
@@ -188,7 +188,7 @@ export function AIAssistantPage() {
         </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
+      <div ref={scrollRef} className="mobile-fixed-page-body px-4 py-4">
         {isEmpty ? (
           <div className="flex flex-col items-center pt-8">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">

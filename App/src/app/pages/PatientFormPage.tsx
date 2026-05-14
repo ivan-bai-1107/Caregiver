@@ -27,10 +27,10 @@ export function PatientFormPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="mobile-fixed-page bg-background">
       <Toaster position="top-center" richColors />
 
-      <div className="bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
+      <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => navigate(-1)} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6" />
@@ -42,6 +42,7 @@ export function PatientFormPage() {
         </div>
       </div>
 
+      <div className="mobile-fixed-page-body">
       {isLoading ? (
         <div className="px-6 py-10">
           <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
@@ -146,6 +147,7 @@ export function PatientFormPage() {
           </button>
         </form>
       ) : null}
+      </div>
     </div>
   );
 }

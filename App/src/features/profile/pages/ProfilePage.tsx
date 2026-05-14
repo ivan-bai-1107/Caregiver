@@ -39,8 +39,8 @@ export function ProfilePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
+    <div className="mobile-fixed-page bg-background">
+      <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl flex-shrink-0">
             {profile?.username.slice(0, 1) || "用"}
@@ -86,7 +86,7 @@ export function ProfilePage() {
         </div>
       </div>
 
-      <div className="px-6 py-6 space-y-6">
+      <div className="mobile-fixed-page-body px-6 py-6 space-y-6">
         {isLoading ? (
           <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
             个人中心加载中...

@@ -186,13 +186,25 @@
 }
 
 @layer components {
-  .app-scroll-shell > * > :is(
-    [class*="bg-gradient-to-br"][class*="from-primary"][class*="rounded-b-"],
-    [class*="bg-primary"][class*="text-white"][class*="rounded-b-"]
-  ) {
-    position: sticky;
-    top: 0;
-    z-index: 30;
+  .mobile-fixed-page {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .mobile-fixed-page-header {
     flex-shrink: 0;
+    position: relative;
+    z-index: 20;
+  }
+
+  .mobile-fixed-page-body {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--background);
   }
 }

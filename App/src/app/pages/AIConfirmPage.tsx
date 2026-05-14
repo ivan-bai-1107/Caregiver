@@ -490,9 +490,9 @@ export function AIConfirmPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="mobile-fixed-page bg-background">
       <Toaster position="top-center" richColors />
-      <div className="bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
+      <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => navigate(-1)} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6" />
@@ -515,7 +515,7 @@ export function AIConfirmPage() {
         </div>
       </div>
 
-      <div className="px-6 py-6 space-y-5 pb-10">
+      <div className="mobile-fixed-page-body px-6 py-6 space-y-5 pb-10">
         <div className="flex items-start gap-3 bg-primary/5 border border-primary/20 rounded-2xl p-4">
           <Edit2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
           <div>

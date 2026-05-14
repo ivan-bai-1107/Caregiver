@@ -41,10 +41,10 @@ export function TaskFormPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="mobile-fixed-page bg-background">
       <Toaster position="top-center" richColors />
 
-      <div className="rounded-b-[2rem] bg-gradient-to-br from-primary to-primary/80 px-6 pb-6 pt-12 text-white">
+      <div className="mobile-fixed-page-header rounded-b-[2rem] bg-gradient-to-br from-primary to-primary/80 px-6 pb-6 pt-12 text-white">
         <div className="mb-2 flex items-center justify-between">
           <button className="-ml-2 p-2" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-6 w-6" />
@@ -62,6 +62,7 @@ export function TaskFormPage() {
         </div>
       </div>
 
+      <div className="mobile-fixed-page-body">
       {formState.isLoading ? (
         <div className="px-6 py-10">
           <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
@@ -275,6 +276,7 @@ export function TaskFormPage() {
           </button>
         </form>
       ) : null}
+      </div>
     </div>
   );
 }

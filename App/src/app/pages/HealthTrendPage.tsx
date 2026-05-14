@@ -62,8 +62,8 @@ export function HealthTrendPage() {
           : "请选择日期";
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
+    <div className="mobile-fixed-page bg-background">
+      <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
         <div className="flex items-center justify-between mb-5">
           <button onClick={() => navigate(`/patients/${patientId}`)} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6" />
@@ -80,6 +80,7 @@ export function HealthTrendPage() {
         </div>
       </div>
 
+      <div className="mobile-fixed-page-body">
       <div className="px-6 py-3 border-b border-border bg-card">
         <div className="flex items-center gap-2 overflow-x-auto">
           {metricTabs.map((tab) => (
@@ -285,6 +286,7 @@ export function HealthTrendPage() {
           <ClipboardList className="w-4 h-4" />
           查看原始记录数据
         </button>
+      </div>
       </div>
     </div>
   );

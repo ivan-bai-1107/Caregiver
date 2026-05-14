@@ -37,8 +37,8 @@ export function KnowledgeListPage() {
   } = useKnowledgeListState();
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
+    <div className="mobile-fixed-page bg-background">
+      <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
         <div className="flex items-center gap-3 mb-5">
           <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm bg-white/20 backdrop-blur-sm">
             <BookOpen className="w-4 h-4" />
@@ -65,6 +65,7 @@ export function KnowledgeListPage() {
         </div>
       </div>
 
+      <div className="mobile-fixed-page-body">
       <div className="px-6 py-3 border-b border-border bg-card overflow-x-auto">
         <div className="flex items-center gap-2 min-w-max">
           {categoryTabs.map((category) => (
@@ -179,6 +180,7 @@ export function KnowledgeListPage() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
