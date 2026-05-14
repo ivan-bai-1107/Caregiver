@@ -15,7 +15,11 @@ from app.schemas.ai import AiAssistantRequest, AiAssistantResponse
 from app.schemas.base import CamelModel, to_camel
 from app.services.cache_service import invalidate_admin_dashboard_cache
 from app.services.deepseek_service import DeepSeekServiceError, call_deepseek_assistant
-from app.services.prompt_service import get_active_ai_system_prompt
+from app.services.prompt_service import (
+    get_active_ai_intent_prompt,
+    get_active_ai_system_prompt,
+    get_active_rag_policy_prompt,
+)
 from app.services.rag_service import knowledge_source_labels, retrieve_knowledge_context
 
 AIIntent = Literal["qa", "care_record", "care_task", "form_prefill"]
@@ -461,6 +465,8 @@ def build_deepseek_response(
         patients=patient_prompt_context(patients),
         knowledge_context=knowledge_context,
         system_prompt=get_active_ai_system_prompt(db),
+        scene_prompt=get_active_ai_intent_prompt(db, detect_intent(message)),
+        rag_policy_prompt=get_active_rag_policy_prompt(db),
     )
     return validate_provider_response(conversation_id, raw_response, patients, knowledge_context)
 

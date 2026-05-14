@@ -31,7 +31,7 @@ from app.models.knowledge import KnowledgeArticle, KnowledgeCategory, UserKnowle
 from app.models.patient import Patient
 from app.models.user import User
 from app.models.user_settings import UserNotificationSetting, UserPreference
-from app.services.deepseek_service import SYSTEM_PROMPT
+from app.services.prompt_service import DEFAULT_PROMPT_TEMPLATES
 
 RANDOM_SEED = 20260515
 MAIN_USER_EMAIL = "caregiver@example.com"
@@ -132,16 +132,17 @@ def create_admins(db) -> None:
             status="active",
         )
     )
-    db.add(
-        PromptTemplate(
-            key="ai_assistant_system",
-            name="AI 助手系统 Prompt",
-            description="控制前台 AI 助手的身份、安全边界、RAG 使用和结构化 JSON 输出规则。",
-            content=SYSTEM_PROMPT,
-            status="active",
-            is_system=True,
+    for template in DEFAULT_PROMPT_TEMPLATES:
+        db.add(
+            PromptTemplate(
+                key=template["key"],
+                name=template["name"],
+                description=template["description"],
+                content=template["content"],
+                status="active",
+                is_system=True,
+            )
         )
-    )
 
 
 def create_patients(db, users: list[User]) -> list[Patient]:

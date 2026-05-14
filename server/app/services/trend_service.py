@@ -14,6 +14,7 @@ from app.models.user import User
 from app.schemas.trend import TrendAnalysis, TrendPoint, TrendSeries
 from app.services.deepseek_service import DeepSeekServiceError, call_deepseek_json
 from app.services.patient_service import get_patient_or_404
+from app.services.prompt_service import TREND_ANALYSIS_SYSTEM_PROMPT, get_active_trend_analysis_prompt
 
 METRIC_TYPE_MAP = {
     "blood_pressure_systolic": "bloodPressureSystolic",
@@ -29,27 +30,6 @@ METRIC_TYPE_MAP = {
 
 TREND_ANALYSIS_TTL_SECONDS = 60 * 60 * 24
 TREND_DATA_TTL_SECONDS = 60 * 10
-
-TREND_ANALYSIS_SYSTEM_PROMPT = """你是医疗照顾者系统里的护理趋势分析助手。
-你只能基于给定的结构化趋势数据做护理观察总结，不能做医疗诊断，不能替代医生。
-必须返回严格 JSON，不要返回 markdown，不要返回解释性前缀。
-
-输出 JSON 必须符合：
-{
-  "summary": "string",
-  "riskLevel": "stable | attention | high",
-  "highlights": ["string"],
-  "suggestions": ["string"],
-  "riskNote": "string"
-}
-
-要求：
-- summary 用 1 句话概括趋势。
-- highlights 返回 2 到 4 条，描述数据变化和需要关注的点。
-- suggestions 返回 2 到 4 条，必须是护理记录、观察、复诊沟通层面的建议。
-- riskNote 必须说明 AI 分析仅供护理参考，不构成诊断。
-"""
-
 
 def get_metric_trend(
     db: Session,
@@ -349,7 +329,7 @@ def get_trend_analysis(
         try:
             raw = call_deepseek_json(
                 settings=settings,
-                system_prompt=TREND_ANALYSIS_SYSTEM_PROMPT,
+                system_prompt=get_active_trend_analysis_prompt(db),
                 user_prompt=prompt,
                 temperature=0.1,
             )

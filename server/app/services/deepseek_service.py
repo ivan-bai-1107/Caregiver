@@ -39,6 +39,8 @@ def build_user_prompt(
     message: str,
     patients: list[dict[str, str]],
     knowledge_context: list[dict[str, Any]] | None = None,
+    scene_prompt: str = "",
+    rag_policy_prompt: str = "",
 ) -> str:
     patient_context = json.dumps(patients, ensure_ascii=False)
     rag_context = json.dumps(knowledge_context or [], ensure_ascii=False)
@@ -50,6 +52,12 @@ def build_user_prompt(
 
 可参考的知识库片段：
 {rag_context}
+
+当前场景专项 Prompt：
+{scene_prompt}
+
+RAG 引用策略：
+{rag_policy_prompt}
 
 约束：
 - patientId 只能使用上方患者列表里的 id。
@@ -131,10 +139,12 @@ def call_deepseek_assistant(
     patients: list[dict[str, str]],
     knowledge_context: list[dict[str, Any]] | None = None,
     system_prompt: str | None = None,
+    scene_prompt: str = "",
+    rag_policy_prompt: str = "",
 ) -> dict[str, Any]:
     return call_deepseek_json(
         settings=settings,
         system_prompt=system_prompt or SYSTEM_PROMPT,
-        user_prompt=build_user_prompt(message, patients, knowledge_context),
+        user_prompt=build_user_prompt(message, patients, knowledge_context, scene_prompt, rag_policy_prompt),
         temperature=0.2,
     )

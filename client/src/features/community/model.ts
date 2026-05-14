@@ -68,6 +68,8 @@ export const communityTagOptions = [
   { value: "experience", label: "经验分享" },
   { value: "tools", label: "工具分享" },
   { value: "question", label: "护理疑问" },
+  { value: "care", label: "日常照护" },
+  { value: "rehab", label: "康复训练" },
   { value: "discussion", label: "交流讨论" },
 ] as const;
 
