@@ -29,6 +29,7 @@ interface ChatMessage {
   draftPayload?: AIDraftPayload;
   sources?: string[];
   riskNote?: string;
+  generatedBy?: string;
 }
 
 const quickActions = [
@@ -106,6 +107,7 @@ function toAiMessage(response: AIAssistantResponse): ChatMessage {
     draftPayload: response.draftPayload,
     sources: response.sources,
     riskNote: response.riskNote,
+    generatedBy: response.generatedBy,
   };
 }
 
@@ -288,6 +290,12 @@ export function AIAssistantPage() {
                           去确认保存
                           <ChevronRight className="w-4 h-4" />
                         </button>
+                      </div>
+                    ) : null}
+
+                    {message.generatedBy ? (
+                      <div className="inline-flex rounded-lg bg-primary/10 px-2.5 py-1 text-xs text-primary">
+                        {message.generatedBy === "deepseek" ? "DeepSeek" : "本地兜底"}
                       </div>
                     ) : null}
 

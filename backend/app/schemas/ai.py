@@ -19,3 +19,4 @@ class AiAssistantResponse(CamelModel):
     draft_payload: dict[str, Any] | None
     sources: list[str]
     risk_note: str
+    generated_by: str = "fallback"

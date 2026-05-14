@@ -178,6 +178,26 @@ export function CareWorkflowPage() {
           </div>
         </div>
 
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          {[
+            { label: "查看患者", path: "/patients", icon: Users },
+            { label: "查看记录", path: "/records", icon: ClipboardList },
+            { label: "查看任务", path: "/tasks", icon: CheckSquare },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-white/20 px-2 py-2.5 text-xs text-white backdrop-blur-sm"
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="grid grid-cols-4 gap-2 mt-4">
           {[
             { label: "新增患者", path: "/patients/new", icon: Users },
@@ -262,7 +282,15 @@ export function CareWorkflowPage() {
 
         {!isLoading && !error && activeTab === "patients" ? (
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground mb-2">共 {filteredPatients.length} 位患者</p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">共 {filteredPatients.length} 位患者</p>
+              <button
+                className="text-xs text-primary"
+                onClick={() => navigate("/patients")}
+              >
+                查看全部患者
+              </button>
+            </div>
             {filteredPatients.map((patient) => {
               const status = getStatusConfig(getPatientStatus(patient));
               return (
@@ -299,13 +327,21 @@ export function CareWorkflowPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-muted-foreground">共 {filteredRecords.length} 条最近记录</p>
-              <button
-                onClick={() => navigate("/ai-assistant")}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                AI 记录
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate("/records")}
+                  className="px-3 py-1.5 text-primary text-xs"
+                >
+                  查看全部记录
+                </button>
+                <button
+                  onClick={() => navigate("/ai-assistant")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  AI 记录
+                </button>
+              </div>
             </div>
             {filteredRecords.map((record) => (
               <div key={record.id} className="bg-card rounded-2xl p-4 border border-border">
@@ -341,13 +377,21 @@ export function CareWorkflowPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-muted-foreground">{filteredTasks.length} 项待处理任务</p>
-              <button
-                onClick={() => navigate("/ai-assistant")}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                AI 创建
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate("/tasks")}
+                  className="px-3 py-1.5 text-primary text-xs"
+                >
+                  查看全部任务
+                </button>
+                <button
+                  onClick={() => navigate("/ai-assistant")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  AI 创建
+                </button>
+              </div>
             </div>
             {filteredTasks.map((task) => {
               const status = getTaskStatusConfig(task);

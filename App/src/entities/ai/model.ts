@@ -17,4 +17,5 @@ export interface AIAssistantResponse {
   draftPayload: AIDraftPayload;
   sources: string[];
   riskNote: string;
+  generatedBy?: string;
 }

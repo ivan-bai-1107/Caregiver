@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Calendar, ClipboardList } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Calendar, ClipboardList, Loader2, Sparkles } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useHealthTrendState } from "@/features/trends/state/useHealthTrendState";
 
@@ -24,6 +24,9 @@ export function HealthTrendPage() {
     singleMetricPoints,
     unit,
     trendStats,
+    analysis,
+    isAnalysisLoading,
+    analysisError,
     isLoading,
     error,
   } = useHealthTrendState(patientId);
@@ -60,6 +63,18 @@ export function HealthTrendPage() {
         : customRangeReady
           ? `${customStartDate} 至 ${customEndDate}`
           : "请选择日期";
+  const riskLabel =
+    analysis?.riskLevel === "high"
+      ? "高关注"
+      : analysis?.riskLevel === "attention"
+        ? "需关注"
+        : "平稳";
+  const riskClass =
+    analysis?.riskLevel === "high"
+      ? "bg-destructive/10 text-destructive"
+      : analysis?.riskLevel === "attention"
+        ? "bg-accent/10 text-accent"
+        : "bg-primary/10 text-primary";
 
   return (
     <div className="mobile-fixed-page bg-background">
@@ -255,27 +270,70 @@ export function HealthTrendPage() {
           <div className="px-5 pt-5 pb-4 border-b border-primary/10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
-                <ClipboardList className="w-5 h-5 text-primary" />
+                <Sparkles className="w-5 h-5 text-primary" />
               </div>
-              <div>
-                <h3 className="font-medium">趋势接入说明</h3>
-                <p className="text-xs text-muted-foreground">本轮只接 series 数据，不进入 AI 深分析</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-medium">AI 趋势分析</h3>
+                  {analysis ? (
+                    <span className={`rounded-lg px-2 py-0.5 text-xs ${riskClass}`}>
+                      {riskLabel}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {analysis?.generatedBy === "deepseek" ? "DeepSeek 分析 · Redis 缓存" : "本地兜底分析 · Redis 缓存"}
+                </p>
               </div>
             </div>
           </div>
-          <div className="px-5 py-4 space-y-4">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1.5 uppercase tracking-wide">当前状态</p>
-              <p className="text-sm text-foreground/85 leading-relaxed">
-                当前页面已改为真实后端 API 驱动。血压继续按双请求组合，其他指标维持单指标单请求。
-              </p>
-            </div>
-            <div className="pt-3 border-t border-primary/10">
-              <p className="text-xs text-muted-foreground mb-1.5 uppercase tracking-wide">本轮边界</p>
-              <p className="text-sm text-foreground/85 leading-relaxed">
-                趋势分析、异常解释和护理建议仍留到下一批处理，这里只负责把结构化 series 拉通并展示出来。
-              </p>
-            </div>
+          <div className="px-5 py-4">
+            {isAnalysisLoading ? (
+              <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                正在生成 AI 趋势分析...
+              </div>
+            ) : null}
+
+            {!isAnalysisLoading && analysisError ? (
+              <div className="flex items-start gap-2 rounded-2xl border border-accent/20 bg-accent/5 p-4">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" />
+                <p className="text-sm text-foreground/75">{analysisError}</p>
+              </div>
+            ) : null}
+
+            {!isAnalysisLoading && analysis ? (
+              <div className="space-y-4">
+                <p className="text-sm text-foreground/85 leading-relaxed">{analysis.summary}</p>
+
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">关键观察</p>
+                  <div className="space-y-2">
+                    {analysis.highlights.map((item) => (
+                      <div key={item} className="rounded-xl bg-card/70 px-3 py-2 text-sm text-foreground/80">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-primary/10">
+                  <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">护理建议</p>
+                  <div className="space-y-2">
+                    {analysis.suggestions.map((item) => (
+                      <div key={item} className="rounded-xl bg-primary/5 px-3 py-2 text-sm text-foreground/80">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2 rounded-xl bg-accent/5 px-3 py-2">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-accent" />
+                  <p className="text-xs text-foreground/65 leading-relaxed">{analysis.riskNote}</p>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 

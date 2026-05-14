@@ -4,6 +4,8 @@ import { getPatient } from "@/features/patients/services/patient.service";
 import {
   getBloodPressureTrendSeries,
   getMetricTrendSeries,
+  getTrendAnalysis,
+  type TrendAnalysis,
   type TrendRangeQuery,
 } from "@/features/trends/services/trend.service";
 
@@ -74,6 +76,9 @@ export function useHealthTrendState(patientId?: string) {
     Array<{ date: string; systolic?: number; diastolic?: number }>
   >([]);
   const [singleMetricPoints, setSingleMetricPoints] = useState<Array<{ date: string; value: number }>>([]);
+  const [analysis, setAnalysis] = useState<TrendAnalysis | null>(null);
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,6 +126,9 @@ export function useHealthTrendState(patientId?: string) {
       if (!isCustomRangeReady) {
         setBloodPressurePoints([]);
         setSingleMetricPoints([]);
+        setAnalysis(null);
+        setIsAnalysisLoading(false);
+        setAnalysisError(null);
         setIsLoading(false);
         setError(null);
         return;
@@ -137,9 +145,12 @@ export function useHealthTrendState(patientId?: string) {
               };
 
       setIsLoading(true);
+      setIsAnalysisLoading(true);
       setError(null);
+      setAnalysisError(null);
 
       try {
+        const analysisPromise = getTrendAnalysis(patientId, metric, range);
         if (metric === "blood_pressure") {
           const response = await getBloodPressureTrendSeries(patientId, range);
           if (isMounted) {
@@ -153,15 +164,29 @@ export function useHealthTrendState(patientId?: string) {
             setBloodPressurePoints([]);
           }
         }
+        try {
+          const analysisResponse = await analysisPromise;
+          if (isMounted) {
+            setAnalysis(analysisResponse);
+          }
+        } catch {
+          if (isMounted) {
+            setAnalysis(null);
+            setAnalysisError("AI 趋势分析暂时不可用，请稍后重试。");
+          }
+        }
       } catch (loadError) {
         if (isMounted) {
           setError("趋势数据加载失败，请稍后重试。");
           setBloodPressurePoints([]);
           setSingleMetricPoints([]);
+          setAnalysis(null);
+          setAnalysisError("AI 趋势分析暂时不可用，请稍后重试。");
         }
       } finally {
         if (isMounted) {
           setIsLoading(false);
+          setIsAnalysisLoading(false);
         }
       }
     }
@@ -225,6 +250,9 @@ export function useHealthTrendState(patientId?: string) {
     singleMetricPoints,
     unit: getMetricUnit(metric),
     trendStats,
+    analysis,
+    isAnalysisLoading,
+    analysisError,
     isLoading,
     error,
   };

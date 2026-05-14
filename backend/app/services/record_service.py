@@ -10,7 +10,11 @@ from app.models.patient import Patient
 from app.models.user import User
 from app.schemas.base import PagedResponse
 from app.schemas.care_record import CareMetricIn, CareMetricOut, CareRecordCreate, CareRecordOut, CareRecordUpdate
-from app.services.cache_service import invalidate_admin_dashboard_cache, invalidate_care_workbench_cache
+from app.services.cache_service import (
+    invalidate_admin_dashboard_cache,
+    invalidate_care_workbench_cache,
+    invalidate_trend_analysis_cache,
+)
 
 
 def ensure_patient_belongs_to_user(db: Session, user: User, patient_id: str) -> Patient:
@@ -148,12 +152,14 @@ def create_record(db: Session, user: User, payload: CareRecordCreate) -> CareRec
     db.refresh(record, attribute_names=["metrics"])
     invalidate_care_workbench_cache(user.id)
     invalidate_admin_dashboard_cache()
+    invalidate_trend_analysis_cache(user.id, record.patient_id)
     return to_record_out(record)
 
 
 def update_record(db: Session, user: User, record_id: str, payload: CareRecordUpdate) -> CareRecordOut:
     ensure_patient_belongs_to_user(db, user, payload.patient_id)
     record = get_record_or_404(db, user, record_id)
+    previous_patient_id = record.patient_id
     record.patient_id = payload.patient_id
     record.record_type = payload.record_type
     record.occurred_at = payload.occurred_at
@@ -166,4 +172,7 @@ def update_record(db: Session, user: User, record_id: str, payload: CareRecordUp
     db.refresh(record, attribute_names=["metrics"])
     invalidate_care_workbench_cache(user.id)
     invalidate_admin_dashboard_cache()
+    if previous_patient_id != record.patient_id:
+        invalidate_trend_analysis_cache(user.id, previous_patient_id)
+    invalidate_trend_analysis_cache(user.id, record.patient_id)
     return to_record_out(record)

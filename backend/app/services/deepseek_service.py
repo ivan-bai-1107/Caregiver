@@ -75,11 +75,11 @@ def parse_response_content(payload: dict[str, Any]) -> dict[str, Any]:
     return parsed
 
 
-def call_deepseek_assistant(
+def call_deepseek_json(
     settings: Settings,
-    message: str,
-    patients: list[dict[str, str]],
-    system_prompt: str | None = None,
+    system_prompt: str,
+    user_prompt: str,
+    temperature: float = 0.2,
 ) -> dict[str, Any]:
     api_key = settings.deepseek_api_key.get_secret_value().strip()
     if not api_key:
@@ -89,10 +89,10 @@ def call_deepseek_assistant(
     request_payload = {
         "model": settings.deepseek_model,
         "messages": [
-            {"role": "system", "content": system_prompt or SYSTEM_PROMPT},
-            {"role": "user", "content": build_user_prompt(message, patients)},
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
         ],
-        "temperature": 0.2,
+        "temperature": temperature,
         "response_format": {"type": "json_object"},
     }
     headers = {
@@ -113,3 +113,17 @@ def call_deepseek_assistant(
     if not isinstance(payload, dict):
         raise DeepSeekServiceError("DeepSeek HTTP response must be a JSON object")
     return parse_response_content(payload)
+
+
+def call_deepseek_assistant(
+    settings: Settings,
+    message: str,
+    patients: list[dict[str, str]],
+    system_prompt: str | None = None,
+) -> dict[str, Any]:
+    return call_deepseek_json(
+        settings=settings,
+        system_prompt=system_prompt or SYSTEM_PROMPT,
+        user_prompt=build_user_prompt(message, patients),
+        temperature=0.2,
+    )

@@ -328,6 +328,7 @@ def build_rule_based_response(conversation_id: str, patients: list[Patient], mes
         draft_payload=draft_payload,
         sources=sources,
         risk_note=risk_note,
+        generated_by="fallback",
     )
 
 
@@ -360,6 +361,14 @@ def validate_provider_response(
     raw_response: dict[str, Any],
     patients: list[Patient],
 ) -> AiAssistantResponse:
+    if not str(raw_response.get("riskNote") or "").strip():
+        raw_response = {
+            **raw_response,
+            "riskNote": "AI 回复仅供护理参考，不构成医疗诊断或治疗建议。",
+        }
+    if not isinstance(raw_response.get("sources"), list):
+        raw_response = {**raw_response, "sources": []}
+
     provider_response = ProviderAiResponse.model_validate(raw_response)
     draft_payload: dict[str, Any] | None = None
 
@@ -394,6 +403,7 @@ def validate_provider_response(
         draft_payload=draft_payload,
         sources=provider_response.sources,
         risk_note=provider_response.risk_note.strip(),
+        generated_by="deepseek",
     )
 
 

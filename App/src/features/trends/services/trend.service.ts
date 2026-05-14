@@ -38,6 +38,30 @@ export interface TrendRangeQuery {
   endAt?: string;
 }
 
+interface TrendAnalysisResponse {
+  patientId?: string;
+  metricType?: string;
+  summary?: string;
+  riskLevel?: "stable" | "attention" | "high" | string;
+  highlights?: string[];
+  suggestions?: string[];
+  riskNote?: string;
+  generatedBy?: string;
+}
+
+export interface TrendAnalysis {
+  patientId: string;
+  metric: TrendPageMetricKey;
+  summary: string;
+  riskLevel: "stable" | "attention" | "high";
+  highlights: string[];
+  suggestions: string[];
+  riskNote: string;
+  generatedBy: string;
+}
+
+export type TrendPageMetricKey = "blood_pressure" | "blood_sugar" | "temperature" | "heart_rate";
+
 function mapMetricSeries(
   patientId: string,
   metric: TrendMetric,
@@ -96,5 +120,30 @@ export async function getBloodPressureTrendSeries(
   return {
     patientId,
     points: Array.from(pointMap.values()),
+  };
+}
+
+export async function getTrendAnalysis(
+  patientId: string,
+  metric: TrendPageMetricKey,
+  range: TrendRangeQuery = {},
+): Promise<TrendAnalysis> {
+  const response = await apiClient.get<TrendAnalysisResponse>(
+    `/api/patients/${patientId}/metrics/trend-analysis`,
+    { metricType: metric, startAt: range.startAt, endAt: range.endAt },
+  );
+  const riskLevel = response.riskLevel === "stable" || response.riskLevel === "high"
+    ? response.riskLevel
+    : "attention";
+
+  return {
+    patientId,
+    metric,
+    summary: response.summary || "趋势分析暂不可用，请稍后重试。",
+    riskLevel,
+    highlights: response.highlights ?? [],
+    suggestions: response.suggestions ?? [],
+    riskNote: response.riskNote || "AI 分析仅供护理参考，不构成医疗诊断或治疗建议。",
+    generatedBy: response.generatedBy || "fallback",
   };
 }

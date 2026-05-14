@@ -207,4 +207,10 @@
     overscroll-behavior: contain;
     background: var(--background);
   }
+
+  .mobile-fixed-page-body::after {
+    content: "";
+    display: block;
+    height: calc(5.75rem + env(safe-area-inset-bottom));
+  }
 }
