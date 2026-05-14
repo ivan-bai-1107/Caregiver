@@ -17,7 +17,7 @@ import {
   submitRecordDraft,
 } from "../services/record.service";
 
-export function useRecordFormState() {
+export function useRecordFormState(initialPatientId = "") {
   const [availablePatients, setAvailablePatients] = useState<RecordFormState["availablePatients"]>([]);
   const [draft, setDraft] = useState<CareRecordDraft>(() => createEmptyRecordDraft());
   const [isLoading, setIsLoading] = useState(true);
@@ -32,6 +32,22 @@ export function useRecordFormState() {
     try {
       const bootstrap = await getRecordFormBootstrap();
       setAvailablePatients(bootstrap.availablePatients);
+      setDraft((previousDraft) => {
+        if (previousDraft.patientId || !initialPatientId) {
+          return previousDraft;
+        }
+
+        const hasInitialPatient = bootstrap.availablePatients.some(
+          (patient) => patient.value === initialPatientId,
+        );
+
+        return hasInitialPatient
+          ? {
+              ...previousDraft,
+              patientId: initialPatientId,
+            }
+          : previousDraft;
+      });
     } catch (error) {
       setLoadError("记录表单初始化失败，请稍后重试。");
     } finally {
@@ -41,7 +57,7 @@ export function useRecordFormState() {
 
   useEffect(() => {
     void loadBootstrap();
-  }, []);
+  }, [initialPatientId]);
 
   const metricFields = useMemo(
     () => getRecordMetricFields(draft.recordType),

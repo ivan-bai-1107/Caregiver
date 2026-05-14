@@ -38,8 +38,6 @@ interface CareTaskDto {
   status?: string;
 }
 
-export const taskReferenceTime = new Date("2026-04-15T17:30:00+08:00");
-
 function toTaskType(value?: string): CareTaskType {
   switch (value) {
     case "blood_pressure":

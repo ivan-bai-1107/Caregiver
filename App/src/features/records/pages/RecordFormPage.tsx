@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft, Save, Sparkles } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { appRoutes } from "../../../shared/constants/routes";
@@ -9,6 +9,8 @@ import { useRecordFormState } from "../state/useRecordFormState";
 
 export function RecordFormPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialPatientId = searchParams.get("patient") ?? "";
   const {
     formState,
     hasTriedSubmit,
@@ -18,7 +20,7 @@ export function RecordFormPage() {
     getFieldError,
     submit,
     retryBootstrap,
-  } = useRecordFormState();
+  } = useRecordFormState(initialPatientId);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -31,7 +33,10 @@ export function RecordFormPage() {
     }
 
     toast.success("护理记录已保存");
-    setTimeout(() => navigate(appRoutes.records), 600);
+    setTimeout(
+      () => navigate(initialPatientId ? appRoutes.patientRecords(initialPatientId) : appRoutes.records),
+      600,
+    );
   };
 
   return (

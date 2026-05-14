@@ -10,7 +10,7 @@ import {
   getTaskFormBootstrap,
 } from "@/features/tasks/services/task.service";
 
-export function useTaskFormState() {
+export function useTaskFormState(initialPatientId = "") {
   const [availablePatients, setAvailablePatients] = useState<TaskFormState["availablePatients"]>([]);
   const [draft, setDraft] = useState(createEmptyCareTaskDraft());
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -26,6 +26,22 @@ export function useTaskFormState() {
     try {
       const bootstrap = await getTaskFormBootstrap();
       setAvailablePatients(bootstrap.availablePatients);
+      setDraft((previousDraft) => {
+        if (previousDraft.patientId || !initialPatientId) {
+          return previousDraft;
+        }
+
+        const hasInitialPatient = bootstrap.availablePatients.some(
+          (patient) => patient.value === initialPatientId,
+        );
+
+        return hasInitialPatient
+          ? {
+              ...previousDraft,
+              patientId: initialPatientId,
+            }
+          : previousDraft;
+      });
     } catch (error) {
       setLoadError("任务表单初始化失败，请稍后重试。");
     } finally {
@@ -35,7 +51,7 @@ export function useTaskFormState() {
 
   useEffect(() => {
     void loadBootstrap();
-  }, []);
+  }, [initialPatientId]);
 
   function updateDraft<Key extends keyof CareTaskDraft>(
     key: Key,

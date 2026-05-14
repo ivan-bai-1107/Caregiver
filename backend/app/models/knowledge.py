@@ -46,6 +46,7 @@ class KnowledgeArticle(Base):
     author_name: Mapped[str] = mapped_column(String(80), nullable=False, default="")
     author_title: Mapped[str] = mapped_column(String(120), nullable=False, default="")
     source: Mapped[str] = mapped_column(String(160), nullable=False, default="")
+    video_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
     read_time_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     cover_color: Mapped[str] = mapped_column(String(80), nullable=False, default="primary")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="published", index=True)

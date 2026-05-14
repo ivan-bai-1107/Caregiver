@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { LoginDraft } from "@/features/auth/model";
 import { login } from "@/features/auth/services/auth.service";
+import { ApiError } from "@/shared/lib/apiClient";
 
 function validateDraft(draft: LoginDraft) {
   const fieldErrors: Partial<Record<keyof LoginDraft, string>> = {};
@@ -20,6 +21,7 @@ export function useLoginFormState() {
   const [draft, setDraft] = useState<LoginDraft>({
     email: "",
     password: "",
+    rememberMe: true,
   });
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof LoginDraft, string>>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -60,10 +62,13 @@ export function useLoginFormState() {
         user,
       };
     } catch (error) {
-      setSubmitError("登录失败，请检查账号信息后重试。");
+      const message =
+        error instanceof ApiError ? error.message : "登录失败，请检查账号信息后重试。";
+      setSubmitError(message);
       return {
         ok: false as const,
         reason: "request" as const,
+        message,
       };
     } finally {
       setIsSubmitting(false);

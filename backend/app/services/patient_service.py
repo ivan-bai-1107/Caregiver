@@ -24,6 +24,7 @@ from app.schemas.patient import (
     PatientUpcomingTask,
     PatientUpdate,
 )
+from app.services.cache_service import invalidate_admin_dashboard_cache, invalidate_care_workbench_cache
 from app.services.record_service import metric_to_out, record_value_text
 from app.services.task_service import is_task_overdue
 
@@ -85,6 +86,8 @@ def create_patient(db: Session, user: User, payload: PatientCreate) -> PatientOu
     db.add(patient)
     db.commit()
     db.refresh(patient)
+    invalidate_care_workbench_cache(user.id)
+    invalidate_admin_dashboard_cache()
     return to_patient_out(patient)
 
 
@@ -96,6 +99,8 @@ def update_patient(db: Session, user: User, patient_id: str, payload: PatientUpd
     patient.profile_note = payload.profile_note
     db.commit()
     db.refresh(patient)
+    invalidate_care_workbench_cache(user.id)
+    invalidate_admin_dashboard_cache()
     return to_patient_out(patient)
 
 

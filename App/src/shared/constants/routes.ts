@@ -25,10 +25,16 @@ export const routes = {
     return `/health-trend/${patientId}`;
   },
   patientRecords(patientId: string) {
-    return `${routes.records}?patient=${patientId}`;
+    return `${routes.records}?patient=${encodeURIComponent(patientId)}`;
   },
   patientTasks(patientId: string) {
-    return `${routes.tasks}?patient=${patientId}`;
+    return `${routes.tasks}?patient=${encodeURIComponent(patientId)}`;
+  },
+  newRecordForPatient(patientId: string) {
+    return `${routes.newRecord}?patient=${encodeURIComponent(patientId)}`;
+  },
+  newTaskForPatient(patientId: string) {
+    return `${routes.newTask}?patient=${encodeURIComponent(patientId)}`;
   },
 } as const;
 
@@ -47,9 +53,17 @@ export function getHealthTrendRoute(patientId: string) {
 }
 
 export function getPatientRecordsRoute(patientId: string) {
-  return `${routes.records}?patient=${patientId}`;
+  return `${routes.records}?patient=${encodeURIComponent(patientId)}`;
 }
 
 export function getPatientTasksRoute(patientId: string) {
-  return `${routes.tasks}?patient=${patientId}`;
+  return `${routes.tasks}?patient=${encodeURIComponent(patientId)}`;
+}
+
+export function getNewRecordForPatientRoute(patientId: string) {
+  return `${routes.newRecord}?patient=${encodeURIComponent(patientId)}`;
+}
+
+export function getNewTaskForPatientRoute(patientId: string) {
+  return `${routes.newTask}?patient=${encodeURIComponent(patientId)}`;
 }

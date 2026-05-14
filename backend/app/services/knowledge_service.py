@@ -69,6 +69,7 @@ def to_article_list_item(article: KnowledgeArticle, user: User, db: Session) -> 
         author_name=article.author_name,
         author_title=article.author_title,
         source=article.source,
+        video_url=article.video_url,
         read_time_minutes=article.read_time_minutes,
         cover_color=article.cover_color,
         view_count=article.view_count,

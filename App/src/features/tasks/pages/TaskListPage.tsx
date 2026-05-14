@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, X } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { appRoutes } from "@/shared/constants/routes";
 import { TaskCard } from "@/features/tasks/components/TaskCard";
@@ -20,6 +20,9 @@ export function TaskListPage() {
     error,
     retry,
     completeTask,
+    patientFilterId,
+    patientFilterLabel,
+    clearPatientFilter,
   } = useTaskListState();
 
   async function handleComplete(taskId: string) {
@@ -52,7 +55,13 @@ export function TaskListPage() {
             </button>
             <button
               className="flex items-center gap-1.5 rounded-xl bg-white/20 px-3 py-2 text-sm backdrop-blur-sm"
-              onClick={() => navigate(appRoutes.taskNew)}
+              onClick={() =>
+                navigate(
+                  patientFilterId
+                    ? appRoutes.newTaskForPatient(patientFilterId)
+                    : appRoutes.taskNew,
+                )
+              }
             >
               <Plus className="h-4 w-4" />
               新增
@@ -70,6 +79,22 @@ export function TaskListPage() {
       />
 
       <div className="space-y-3 px-6 py-6">
+        {patientFilterLabel ? (
+          <div className="flex items-center justify-between rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+            <span className="text-foreground/80">
+              正在查看「{patientFilterLabel}」的护理任务
+            </span>
+            <button
+              className="flex items-center gap-1 rounded-xl px-2 py-1 text-primary transition-colors hover:bg-primary/10"
+              onClick={clearPatientFilter}
+              type="button"
+            >
+              <X className="h-4 w-4" />
+              清除
+            </button>
+          </div>
+        ) : null}
+
         {isLoading ? (
           <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
             护理任务加载中...

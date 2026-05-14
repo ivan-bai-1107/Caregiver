@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft, Bell, Save, Sparkles } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import {
@@ -15,7 +15,9 @@ import { useTaskFormState } from "@/features/tasks/state/useTaskFormState";
 
 export function TaskFormPage() {
   const navigate = useNavigate();
-  const { formState, updateDraft, retryBootstrap, submit } = useTaskFormState();
+  const [searchParams] = useSearchParams();
+  const initialPatientId = searchParams.get("patient") ?? "";
+  const { formState, updateDraft, retryBootstrap, submit } = useTaskFormState(initialPatientId);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -29,7 +31,10 @@ export function TaskFormPage() {
       }
 
       toast.success("护理任务已创建");
-      setTimeout(() => navigate(appRoutes.tasks), 600);
+      setTimeout(
+        () => navigate(initialPatientId ? appRoutes.patientTasks(initialPatientId) : appRoutes.tasks),
+        600,
+      );
     } catch (submitError) {
       toast.error("任务创建失败，请稍后重试。");
     }

@@ -26,6 +26,7 @@ class KnowledgeArticleListItem(CamelModel):
     author_name: str
     author_title: str
     source: str
+    video_url: str = ""
     read_time_minutes: int
     cover_color: str
     view_count: int

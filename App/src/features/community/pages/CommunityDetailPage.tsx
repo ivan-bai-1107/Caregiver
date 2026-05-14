@@ -13,6 +13,7 @@ import { Toaster, toast } from "sonner";
 import { getCommunityStatusLabel, getCommunityTagLabel } from "@/features/community/model";
 import { useCommunityDetailState } from "@/features/community/state/useCommunityDetailState";
 import { formatDateTimeLabel } from "@/shared/lib/date";
+import { isShareCancelled, shareCurrentPage } from "@/shared/lib/share";
 
 function statusClass(status: string) {
   if (status === "passed") {
@@ -71,6 +72,25 @@ export function CommunityDetailPage() {
       toast.success("举报已提交，后台会尽快处理");
     } catch {
       toast.error("举报提交失败，请稍后重试");
+    }
+  }
+
+  async function handleShare() {
+    if (!post) {
+      return;
+    }
+
+    try {
+      const result = await shareCurrentPage({
+        title: post.title,
+        text: `Caregiver 护理助手社区：${post.title}`,
+      });
+      toast.success(result === "shared" ? "分享面板已打开" : "帖子链接已复制");
+    } catch (shareError) {
+      if (isShareCancelled(shareError)) {
+        return;
+      }
+      toast.error("分享失败，请稍后重试");
     }
   }
 
@@ -185,7 +205,7 @@ export function CommunityDetailPage() {
                 </div>
                 <button
                   className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors ml-auto"
-                  onClick={() => toast.info("分享功能暂未开放")}
+                  onClick={() => void handleShare()}
                 >
                   <Share2 className="w-5 h-5" />
                   <span>分享</span>

@@ -14,6 +14,12 @@ class RegisterRequest(CamelModel):
     password: str = Field(min_length=6, max_length=128)
 
 
+class ResetPasswordRequest(CamelModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=16)
+    password: str = Field(min_length=6, max_length=128)
+
+
 class LoginRequest(CamelModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)

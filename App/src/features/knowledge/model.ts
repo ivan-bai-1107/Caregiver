@@ -18,6 +18,7 @@ export interface KnowledgeArticleListItem {
   authorName: string;
   authorTitle: string;
   source: string;
+  videoUrl: string;
   readTimeMinutes: number;
   coverColor: string;
   viewCount: number;

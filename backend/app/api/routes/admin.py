@@ -5,13 +5,15 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_admin
 from app.core.database import get_db
-from app.core.responses import success_response
+from app.core.redis import redis_get_json, redis_set_json
+from app.core.responses import serialize_payload, success_response
 from app.models.admin import AdminUser
 from app.schemas.admin import (
     AdminKnowledgeArticleCreate,
     AdminKnowledgeArticleStatusUpdate,
     AdminKnowledgeArticleUpdate,
     AdminLoginRequest,
+    AdminPromptTemplateUpdate,
     AdminReviewUpdate,
     UserStatusUpdate,
 )
@@ -22,6 +24,8 @@ from app.services.admin_service import (
     get_ai_log,
     get_dashboard_summary,
     get_user_detail,
+    list_admin_prompts,
+    list_admin_categories,
     list_admin_articles,
     list_ai_logs,
     list_review_comments,
@@ -29,10 +33,12 @@ from app.services.admin_service import (
     list_users,
     update_admin_article,
     update_admin_article_status,
+    update_admin_prompt,
     update_review_comment,
     update_review_post,
     update_user_status,
 )
+from app.services.cache_service import ADMIN_DASHBOARD_SUMMARY_CACHE_KEY
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -55,7 +61,13 @@ def read_dashboard_summary(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[AdminUser, Depends(get_current_admin)],
 ) -> dict[str, object]:
-    return success_response(get_dashboard_summary(db))
+    cached = redis_get_json(ADMIN_DASHBOARD_SUMMARY_CACHE_KEY)
+    if cached is not None:
+        return success_response(cached)
+
+    summary = get_dashboard_summary(db)
+    redis_set_json(ADMIN_DASHBOARD_SUMMARY_CACHE_KEY, 60, serialize_payload(summary))
+    return success_response(summary)
 
 
 @router.get("/users")
@@ -139,6 +151,32 @@ def read_admin_articles(
     status_filter: Annotated[str | None, Query(alias="status")] = None,
 ) -> dict[str, object]:
     return success_response(list_admin_articles(db, status_filter, page, page_size))
+
+
+@router.get("/prompts")
+def read_admin_prompts(
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[AdminUser, Depends(get_current_admin)],
+) -> dict[str, object]:
+    return success_response(list_admin_prompts(db))
+
+
+@router.put("/prompts/{prompt_id}")
+def update_admin_prompt_endpoint(
+    prompt_id: str,
+    payload: AdminPromptTemplateUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[AdminUser, Depends(get_current_admin)],
+) -> dict[str, object]:
+    return success_response(update_admin_prompt(db, prompt_id, payload))
+
+
+@router.get("/knowledge/categories")
+def read_admin_categories(
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[AdminUser, Depends(get_current_admin)],
+) -> dict[str, object]:
+    return success_response(list_admin_categories(db))
 
 
 @router.post("/knowledge/articles")

@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, Bookmark, BookOpen, ChevronRight, Clock, Eye, Heart, Share2, User } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { useKnowledgeDetailState } from "@/features/knowledge/state/useKnowledgeDetailState";
+import { isShareCancelled, shareCurrentPage } from "@/shared/lib/share";
 
 function formatDateLabel(value: string) {
   const date = new Date(value);
@@ -51,6 +52,25 @@ export function KnowledgeDetailPage() {
     toggleBookmark,
   } = useKnowledgeDetailState(id);
 
+  async function handleShare() {
+    if (!article) {
+      return;
+    }
+
+    try {
+      const result = await shareCurrentPage({
+        title: article.title,
+        text: `Caregiver 护理助手：${article.title}`,
+      });
+      toast.success(result === "shared" ? "分享面板已打开" : "文章链接已复制");
+    } catch (shareError) {
+      if (isShareCancelled(shareError)) {
+        return;
+      }
+      toast.error("分享失败，请稍后重试");
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background pb-12">
       <Toaster position="top-center" richColors />
@@ -72,7 +92,7 @@ export function KnowledgeDetailPage() {
             ) : null}
             <button
               className="p-2"
-              onClick={() => toast.info("分享功能暂未开放")}
+              onClick={() => void handleShare()}
               aria-label="分享文章"
             >
               <Share2 className="w-5 h-5" />
@@ -142,17 +162,28 @@ export function KnowledgeDetailPage() {
 
             {article.articleType === "video" ? (
               <div className="bg-card rounded-2xl p-5 border border-border mb-6">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center flex-shrink-0">
-                    <BookOpen className="w-5 h-5" />
+                {article.videoUrl ? (
+                  <video
+                    controls
+                    preload="metadata"
+                    src={article.videoUrl}
+                    className="aspect-video w-full rounded-2xl bg-black"
+                  >
+                    当前浏览器不支持视频播放。
+                  </video>
+                ) : (
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center flex-shrink-0">
+                      <BookOpen className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium mb-1">视频暂不可播放</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        该视频知识尚未配置视频地址，请在后台知识内容管理中补充视频 URL。
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium mb-1">视频内容说明</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      当前演示版本展示视频知识要点，不提供模拟播放控件。后续接入真实视频资源后再开放播放能力。
-                    </p>
-                  </div>
-                </div>
+                )}
               </div>
             ) : null}
 
@@ -185,7 +216,7 @@ export function KnowledgeDetailPage() {
               </button>
               <button
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-muted text-foreground rounded-2xl hover:bg-muted/80 transition-colors"
-                onClick={() => toast.info("分享功能暂未开放")}
+                onClick={() => void handleShare()}
               >
                 <Share2 className="w-5 h-5" />
                 <span>分享</span>

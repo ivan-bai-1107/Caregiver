@@ -21,6 +21,7 @@ from app.schemas.community import (
     CommunityPostReportCreate,
     ReviewStatus,
 )
+from app.services.cache_service import invalidate_admin_dashboard_cache
 
 
 def to_author(user: User) -> CommunityAuthor:
@@ -147,6 +148,7 @@ def create_post(db: Session, user: User, payload: CommunityPostCreate) -> Commun
     db.commit()
     db.refresh(post)
     db.refresh(post, attribute_names=["author"])
+    invalidate_admin_dashboard_cache()
     return to_post_out(db, user, post)
 
 
@@ -185,6 +187,7 @@ def create_comment(db: Session, user: User, post_id: str, payload: CommunityComm
     db.commit()
     db.refresh(comment)
     db.refresh(comment, attribute_names=["author"])
+    invalidate_admin_dashboard_cache()
     return to_comment_out(comment)
 
 

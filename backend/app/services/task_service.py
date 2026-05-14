@@ -9,6 +9,7 @@ from app.models.patient import Patient
 from app.models.user import User
 from app.schemas.base import PagedResponse
 from app.schemas.care_task import CareTaskCreate, CareTaskOut, CareTaskUpdate
+from app.services.cache_service import invalidate_admin_dashboard_cache, invalidate_care_workbench_cache
 from app.services.record_service import ensure_patient_belongs_to_user
 
 
@@ -104,6 +105,8 @@ def create_task(db: Session, user: User, payload: CareTaskCreate) -> CareTaskOut
     db.add(task)
     db.commit()
     db.refresh(task)
+    invalidate_care_workbench_cache(user.id)
+    invalidate_admin_dashboard_cache()
     return to_task_out(task)
 
 
@@ -121,6 +124,8 @@ def update_task(db: Session, user: User, task_id: str, payload: CareTaskUpdate) 
     task.status = payload.status
     db.commit()
     db.refresh(task)
+    invalidate_care_workbench_cache(user.id)
+    invalidate_admin_dashboard_cache()
     return to_task_out(task)
 
 
@@ -129,4 +134,6 @@ def complete_task(db: Session, user: User, task_id: str) -> CareTaskOut:
     task.status = "completed"
     db.commit()
     db.refresh(task)
+    invalidate_care_workbench_cache(user.id)
+    invalidate_admin_dashboard_cache()
     return to_task_out(task)

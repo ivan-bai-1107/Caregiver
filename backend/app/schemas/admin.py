@@ -9,6 +9,7 @@ from app.schemas.community import CommunityCommentOut, CommunityPostOut, ReviewS
 UserStatus = Literal["active", "disabled"]
 AdminStatus = Literal["active", "disabled"]
 ArticleStatus = Literal["published", "draft", "archived"]
+PromptStatus = Literal["active", "disabled"]
 
 
 class AdminLoginRequest(CamelModel):
@@ -64,6 +65,7 @@ class AdminKnowledgeArticleCreate(CamelModel):
     author_name: str = ""
     author_title: str = ""
     source: str = ""
+    video_url: str = ""
     read_time_minutes: int = Field(default=5, ge=1)
     cover_color: str = "primary"
     status: ArticleStatus = "draft"
@@ -88,12 +90,32 @@ class AdminKnowledgeArticleOut(CamelModel):
     author_name: str
     author_title: str
     source: str
+    video_url: str
     read_time_minutes: int
     cover_color: str
     status: ArticleStatus
     view_count: int
     like_count: int
     published_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminPromptTemplateUpdate(CamelModel):
+    name: str = Field(min_length=1, max_length=120)
+    description: str = ""
+    content: str = Field(min_length=20)
+    status: PromptStatus = "active"
+
+
+class AdminPromptTemplateOut(CamelModel):
+    id: str
+    key: str
+    name: str
+    description: str
+    content: str
+    status: PromptStatus
+    is_system: bool
     created_at: datetime
     updated_at: datetime
 

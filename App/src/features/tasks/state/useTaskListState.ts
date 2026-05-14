@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import {
   careTaskPriorityLabels,
   careTaskRepeatRuleLabels,
@@ -14,11 +15,7 @@ import type {
   TaskListItemView,
   TaskListSummary,
 } from "@/features/tasks/model";
-import {
-  completeCareTask,
-  listCareTasks,
-  taskReferenceTime,
-} from "@/features/tasks/services/task.service";
+import { completeCareTask, listCareTasks } from "@/features/tasks/services/task.service";
 
 function getTaskDisplayStatus(task: TaskListItemView): TaskDisplayStatus {
   if (task.status === "completed") {
@@ -33,7 +30,7 @@ function getTaskDisplayStatus(task: TaskListItemView): TaskDisplayStatus {
 }
 
 function toTaskListItemView(task: CareTask, patientNameMap: Map<string, string>): TaskListItemView {
-  const summary = toCareTaskSummary(task, taskReferenceTime);
+  const summary = toCareTaskSummary(task, new Date());
   const patientName = patientNameMap.get(task.patientId) ?? "未关联患者";
   const displayStatus = getTaskDisplayStatus({
     ...summary,
@@ -89,6 +86,8 @@ function filterTaskItems(items: TaskListItemView[], filter: TaskListFilter) {
 }
 
 export function useTaskListState() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const patientFilterId = searchParams.get("patient") ?? "";
   const [tasks, setTasks] = useState<CareTask[]>([]);
   const [patientNameMap, setPatientNameMap] = useState<Map<string, string>>(new Map());
   const [activeFilter, setActiveFilter] = useState<TaskListFilter>("all");
@@ -100,7 +99,13 @@ export function useTaskListState() {
     setError(null);
 
     try {
-      const [nextTasks, patients] = await Promise.all([listCareTasks(), listPatients()]);
+      const [nextTasks, patients] = await Promise.all([
+        listCareTasks({
+          patientId: patientFilterId || undefined,
+          pageSize: 100,
+        }),
+        listPatients(),
+      ]);
       setTasks(nextTasks);
       setPatientNameMap(new Map(patients.map((patient) => [patient.id, patient.name])));
     } catch (loadError) {
@@ -112,7 +117,15 @@ export function useTaskListState() {
 
   useEffect(() => {
     void loadTasks();
-  }, []);
+  }, [patientFilterId]);
+
+  function clearPatientFilter() {
+    setSearchParams((previousParams) => {
+      const nextParams = new URLSearchParams(previousParams);
+      nextParams.delete("patient");
+      return nextParams;
+    });
+  }
 
   async function completeTask(taskId: string) {
     const currentTask = tasks.find((task) => task.id === taskId);
@@ -142,6 +155,9 @@ export function useTaskListState() {
   const summary = buildTaskListSummary(items);
   const filterTabs = buildTaskFilterTabs(summary, items.length);
   const filteredItems = filterTaskItems(items, activeFilter);
+  const patientFilterLabel = patientFilterId
+    ? patientNameMap.get(patientFilterId) ?? "指定患者"
+    : "";
 
   return {
     items: filteredItems,
@@ -153,5 +169,8 @@ export function useTaskListState() {
     error,
     retry: loadTasks,
     completeTask,
+    patientFilterId,
+    patientFilterLabel,
+    clearPatientFilter,
   };
 }

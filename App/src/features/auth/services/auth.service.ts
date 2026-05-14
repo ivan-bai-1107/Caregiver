@@ -22,9 +22,16 @@ interface RegisterPayload {
   password: string;
 }
 
+interface ResetPasswordPayload {
+  email: string;
+  code: string;
+  password: string;
+}
+
 interface LoginPayload {
   email: string;
   password: string;
+  rememberMe: boolean;
 }
 
 function coerceCurrentUser(input: unknown): CurrentUser {
@@ -37,10 +44,10 @@ function coerceCurrentUser(input: unknown): CurrentUser {
   };
 }
 
-async function storeSession(tokens: AuthTokenResponse) {
-  setAuthTokens(tokens);
+async function storeSession(tokens: AuthTokenResponse, persist = true) {
+  setAuthTokens(tokens, persist);
   const user = await getCurrentUser();
-  setCurrentUser(user);
+  setCurrentUser(user, persist);
   return user;
 }
 
@@ -53,9 +60,13 @@ export async function register(payload: RegisterPayload) {
   return storeSession(tokens);
 }
 
+export async function resetPassword(payload: ResetPasswordPayload) {
+  return apiClient.post<null>("/api/auth/password/reset", payload);
+}
+
 export async function login(payload: LoginPayload) {
   const tokens = await apiClient.post<AuthTokenResponse>("/api/auth/login", payload);
-  return storeSession(tokens);
+  return storeSession(tokens, payload.rememberMe);
 }
 
 export async function getCurrentUser() {

@@ -29,6 +29,17 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://127.0.0.1:6379/0", validation_alias="REDIS_URL")
     redis_enabled: bool = Field(default=True, validation_alias="REDIS_ENABLED")
     email_code_ttl_seconds: int = Field(default=600, validation_alias="EMAIL_CODE_TTL_SECONDS")
+    email_provider: str = Field(default="console", validation_alias="EMAIL_PROVIDER")
+    smtp_host: str = Field(default="smtp.qq.com", validation_alias="SMTP_HOST")
+    smtp_port: int = Field(default=465, validation_alias="SMTP_PORT")
+    smtp_use_ssl: bool = Field(default=True, validation_alias="SMTP_USE_SSL")
+    smtp_use_starttls: bool = Field(default=False, validation_alias="SMTP_USE_STARTTLS")
+    smtp_username: str = Field(default="", validation_alias="SMTP_USERNAME")
+    smtp_password: SecretStr = Field(default=SecretStr(""), validation_alias="SMTP_PASSWORD")
+    email_from: str = Field(default="", validation_alias="EMAIL_FROM")
+    email_from_name: str = Field(default="Caregiver 护理助手", validation_alias="EMAIL_FROM_NAME")
+    email_debug_code: bool = Field(default=True, validation_alias="EMAIL_DEBUG_CODE")
+    email_send_timeout_seconds: int = Field(default=10, validation_alias="EMAIL_SEND_TIMEOUT_SECONDS")
     cors_origins: list[str] = [
         "http://127.0.0.1:5173",
         "http://localhost:5173",

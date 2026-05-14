@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router";
 import { AppLayout } from "@/shared/layout/AppLayout";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { ForgotPasswordPage } from "@/features/auth/pages/ForgotPasswordPage";
 import { HomePage } from "@/features/home/pages/HomePage";
 import { PatientListPage } from "./pages/PatientListPage";
 import { PatientDetailPage } from "@/features/patients/pages/PatientDetailPage";
@@ -38,6 +39,10 @@ export const router = createBrowserRouter([
   {
     path: "/register",
     Component: RegisterPage,
+  },
+  {
+    path: "/forgot-password",
+    Component: ForgotPasswordPage,
   },
   {
     path: "/admin/login",

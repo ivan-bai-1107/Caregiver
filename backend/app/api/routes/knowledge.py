@@ -5,8 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.core.responses import success_response
+from app.core.redis import redis_get_json, redis_set_json
+from app.core.responses import serialize_payload, success_response
 from app.models.user import User
+from app.services.cache_service import KNOWLEDGE_CATEGORIES_CACHE_KEY
 from app.services.knowledge_service import (
     bookmark_article,
     get_article_detail,
@@ -26,7 +28,13 @@ def read_categories(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[User, Depends(get_current_user)],
 ) -> dict[str, object]:
-    return success_response(list_categories(db))
+    cached = redis_get_json(KNOWLEDGE_CATEGORIES_CACHE_KEY)
+    if cached is not None:
+        return success_response(cached)
+
+    categories = list_categories(db)
+    redis_set_json(KNOWLEDGE_CATEGORIES_CACHE_KEY, 600, serialize_payload(categories))
+    return success_response(categories)
 
 
 @router.get("/articles")

@@ -2,6 +2,8 @@ const authTokenKey = "care-app-auth-token";
 const refreshTokenKey = "care-app-refresh-token";
 const currentUserKey = "care-app-current-user";
 
+type AuthStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
 export interface AuthTokens {
   token: string;
   refreshToken?: string;
@@ -13,30 +15,59 @@ export interface CurrentUser {
   email: string;
 }
 
-export function getAuthToken() {
-  return localStorage.getItem(authTokenKey);
+function getSessionStorage(): AuthStorage | null {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
 }
 
-export function setAuthTokens(tokens: AuthTokens) {
-  localStorage.setItem(authTokenKey, tokens.token);
+function getLocalStorage(): AuthStorage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function getAuthStorage(persist: boolean): AuthStorage | null {
+  return persist ? getLocalStorage() : getSessionStorage();
+}
+
+export function getAuthToken() {
+  return getSessionStorage()?.getItem(authTokenKey) ?? getLocalStorage()?.getItem(authTokenKey) ?? null;
+}
+
+export function setAuthTokens(tokens: AuthTokens, persist = true) {
+  const storage = getAuthStorage(persist);
+  if (!storage) {
+    return;
+  }
+
+  clearAuthTokens();
+  storage.setItem(authTokenKey, tokens.token);
 
   if (tokens.refreshToken) {
-    localStorage.setItem(refreshTokenKey, tokens.refreshToken);
+    storage.setItem(refreshTokenKey, tokens.refreshToken);
   }
 }
 
 export function clearAuthTokens() {
-  localStorage.removeItem(authTokenKey);
-  localStorage.removeItem(refreshTokenKey);
-  localStorage.removeItem(currentUserKey);
+  [getSessionStorage(), getLocalStorage()].forEach((storage) => {
+    storage?.removeItem(authTokenKey);
+    storage?.removeItem(refreshTokenKey);
+    storage?.removeItem(currentUserKey);
+  });
 }
 
-export function setCurrentUser(user: CurrentUser) {
-  localStorage.setItem(currentUserKey, JSON.stringify(user));
+export function setCurrentUser(user: CurrentUser, persist = true) {
+  getAuthStorage(persist)?.setItem(currentUserKey, JSON.stringify(user));
 }
 
 export function getCurrentUserFromStorage(): CurrentUser | null {
-  const rawValue = localStorage.getItem(currentUserKey);
+  const rawValue =
+    getSessionStorage()?.getItem(currentUserKey) ?? getLocalStorage()?.getItem(currentUserKey);
 
   if (!rawValue) {
     return null;

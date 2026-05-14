@@ -187,7 +187,7 @@ export async function listCareRecords(params: CareRecordListQuery = {}) {
       timeLabel: formatDateTimeLabel(record.occurredAt),
       sourceLabel: recordSourceLabels[record.source],
       isAiGenerated: record.source === "ai",
-      statusLabel: record.source === "ai" ? "待确认" : "已确认",
+      statusLabel: "已确认",
     } satisfies RecordListItemView;
   });
 }

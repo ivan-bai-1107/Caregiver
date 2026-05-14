@@ -173,7 +173,7 @@ export function PatientDetailPage() {
                   AI记录
                 </button>
                 <button
-                  onClick={() => navigate(appRoutes.newRecord)}
+                  onClick={() => navigate(appRoutes.newRecordForPatient(id))}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -232,7 +232,7 @@ export function PatientDetailPage() {
                   AI创建
                 </button>
                 <button
-                  onClick={() => navigate(appRoutes.newTask)}
+                  onClick={() => navigate(appRoutes.newTaskForPatient(id))}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs"
                 >
                   <Plus className="w-3.5 h-3.5" />

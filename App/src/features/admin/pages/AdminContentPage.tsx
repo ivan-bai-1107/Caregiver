@@ -1,4 +1,4 @@
-import { Edit, Eye, EyeOff, FileText, Plus, Search } from "lucide-react";
+import { Edit, Eye, EyeOff, FileText, Plus, Search, Video } from "lucide-react";
 import { toast } from "sonner";
 import type { AdminArticleStatus, AdminKnowledgeArticle, AdminKnowledgeArticleDraft } from "@/features/admin/model";
 import { adminArticleStatusLabels } from "@/features/admin/model";
@@ -128,11 +128,17 @@ export function AdminContentPage() {
                 <td className="py-4 px-6">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-50">
-                      <FileText className="w-4 h-4 text-blue-600" />
+                      {article.articleType === "video" ? (
+                        <Video className="w-4 h-4 text-blue-600" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-blue-600" />
+                      )}
                     </div>
                     <div>
                       <p className="text-sm text-gray-900 line-clamp-1">{article.title}</p>
-                      <p className="text-xs text-gray-400">{article.categoryName}</p>
+                      <p className="text-xs text-gray-400">
+                        {article.categoryName} · {article.articleType === "video" ? "视频" : "文章"}
+                      </p>
                     </div>
                   </div>
                 </td>
@@ -210,6 +216,25 @@ export function AdminContentPage() {
                   <option value="archived">已下架</option>
                 </select>
               </label>
+              <label className="text-sm text-gray-600">
+                类型
+                <select
+                  value={draft.articleType}
+                  onChange={(event) => updateDraft("articleType", event.target.value as AdminKnowledgeArticleDraft["articleType"])}
+                  className="mt-2 w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm"
+                >
+                  <option value="article">图文文章</option>
+                  <option value="video">视频知识</option>
+                </select>
+              </label>
+              <label className="text-sm text-gray-600">
+                封面色
+                <input
+                  value={draft.coverColor}
+                  onChange={(event) => updateDraft("coverColor", event.target.value)}
+                  className="mt-2 w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm"
+                />
+              </label>
               <label className="text-sm text-gray-600 col-span-2">
                 标题
                 <input
@@ -261,6 +286,17 @@ export function AdminContentPage() {
                   className="mt-2 w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm"
                 />
               </label>
+              {draft.articleType === "video" ? (
+                <label className="text-sm text-gray-600 col-span-2">
+                  视频地址
+                  <input
+                    value={draft.videoUrl}
+                    onChange={(event) => updateDraft("videoUrl", event.target.value)}
+                    placeholder="https://example.com/video.mp4"
+                    className="mt-2 w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm"
+                  />
+                </label>
+              ) : null}
               <label className="text-sm text-gray-600 col-span-2">
                 正文
                 <textarea

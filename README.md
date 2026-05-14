@@ -51,10 +51,25 @@ uvicorn app.main:app --reload
 
 ```env
 DATABASE_URL=postgresql+psycopg://caregiver:caregiver123@127.0.0.1:5432/caregiver_system
+
 REDIS_URL=redis://127.0.0.1:6379/0
 REDIS_ENABLED=true
 EMAIL_CODE_TTL_SECONDS=600
+
 JWT_SECRET_KEY=please-change-this-for-local-development
+
+EMAIL_PROVIDER=console
+SMTP_HOST=smtp.qq.com
+SMTP_PORT=465
+SMTP_USE_SSL=true
+SMTP_USE_STARTTLS=false
+SMTP_USERNAME=
+SMTP_PASSWORD=
+EMAIL_FROM=
+EMAIL_FROM_NAME=Caregiver 护理助手
+EMAIL_DEBUG_CODE=true
+EMAIL_SEND_TIMEOUT_SECONDS=10
+
 AI_PROVIDER=deepseek
 AI_USE_REAL_MODEL=true
 DEEPSEEK_API_KEY=
@@ -75,7 +90,7 @@ docker run --name caregiver_postgres `
 
 ## Docker Redis
 
-Redis 当前用于邮箱验证码短期缓存，后续可以继续承载登录限流、提醒队列和热点数据缓存。验证码仍会写入数据库作为 fallback，所以 Redis 不可用时不会让注册主流程直接失败。
+Redis 当前用于邮箱验证码缓存、验证码发送限流、验证码错误锁定、登录失败锁定、AI 调用限流，以及 Admin Dashboard / Care Workbench / Knowledge Categories 的短缓存。验证码仍会写入数据库作为 fallback，所以 Redis 不可用时不会让注册主流程直接失败；限流和缓存会退化为不生效，业务接口继续查数据库。
 
 单独创建 Redis：
 
@@ -97,6 +112,53 @@ docker compose up -d redis
 ```powershell
 docker compose up -d
 ```
+
+查看健康状态：
+
+```powershell
+curl http://127.0.0.1:8000/health
+```
+
+`/health` 会返回 `redis: ok` 或 `redis: unavailable`。
+
+当前 Redis 规则：
+
+- 验证码发送：同一邮箱 60 秒 1 次，同一 IP 每分钟最多 10 次。
+- 验证码校验：同一邮箱错误 5 次后锁定 10 分钟，注册成功后清理验证码和错误计数。
+- 登录：同一邮箱连续密码错误 5 次后锁定 10 分钟，同一 IP 每分钟最多 20 次登录请求。
+- AI：单用户每分钟最多 10 次，每天最多 200 次；超限时不会调用 DeepSeek，也不会写 AI 日志。
+- 短缓存：`/api/admin/dashboard/summary` 缓存 60 秒，`/api/care/workbench` 按用户缓存 30 秒，`/api/knowledge/categories` 缓存 600 秒。
+
+相关写操作会清理缓存：患者、护理记录、任务会清理 Care Workbench；知识文章创建/更新/上下架会清理 Knowledge Categories 和 Admin Dashboard；发帖、审核帖子、创建评论、审核评论、创建 AI 日志、创建用户会清理 Admin Dashboard。部分统计即使漏掉失效点，也有短 TTL 兜底。
+
+## QQ 邮箱 SMTP
+
+本地开发推荐保留：
+
+```env
+EMAIL_PROVIDER=console
+EMAIL_DEBUG_CODE=true
+```
+
+这样 `POST /api/auth/email/send-code` 会返回 `debugCode`，smoke test 不依赖真实邮箱。
+
+真实发送 QQ 邮箱验证码时，在本地 `backend/.env` 中配置：
+
+```env
+EMAIL_PROVIDER=smtp
+SMTP_HOST=smtp.qq.com
+SMTP_PORT=465
+SMTP_USE_SSL=true
+SMTP_USE_STARTTLS=false
+SMTP_USERNAME=你的QQ邮箱或Foxmail邮箱
+SMTP_PASSWORD=
+EMAIL_FROM=你的发件邮箱
+EMAIL_FROM_NAME=Caregiver 护理助手
+EMAIL_DEBUG_CODE=false
+EMAIL_SEND_TIMEOUT_SECONDS=10
+```
+
+`SMTP_PASSWORD` 是 QQ 邮箱里生成的 SMTP 授权码，不是 QQ 登录密码。不要提交 `backend/.env`，也不要把邮箱授权码、DeepSeek key 写入 README、测试脚本或前端环境变量。
 
 ## Alembic
 
@@ -171,12 +233,12 @@ $env:BASE_URL="http://127.0.0.1:8000"
 python scripts/api_smoke_test.py
 ```
 
-Smoke test 覆盖主闭环、AI fallback 场景，以及 Knowledge 分类 / 列表 / 详情 / 点赞 / 收藏。
+Smoke test 默认按本地开发模式验证验证码链路：`EMAIL_PROVIDER=console` 且 `EMAIL_DEBUG_CODE=true`，不会依赖真实 QQ 邮箱。Redis 可用时会强校验验证码缓存、注册后清理和同邮箱连续发送 cooldown；Redis 不可用时会打印提示并跳过 Redis 强断言。
 
 当前 smoke test 范围：
 
 - 用户登录、患者、记录、趋势、任务完成、AI qa/record/task draft
-- Auth 验证码注册链路，Redis 可用时会校验验证码缓存与注册后清理
+- Auth 验证码注册链路，Redis 可用时会校验验证码缓存、注册后清理和发送 cooldown
 - Knowledge 列表、详情、浏览、点赞、收藏
 - Community 发帖、列表、详情、评论、点赞、收藏、举报
 - Admin 登录、Dashboard、用户列表、帖子审核、知识文章列表、AI 日志列表
@@ -210,10 +272,31 @@ Admin：
 - `POST /api/admin/knowledge/articles`
 - `PUT /api/admin/knowledge/articles/{id}`
 - `PUT /api/admin/knowledge/articles/{id}/status`
+- `GET /api/admin/prompts`
+- `PUT /api/admin/prompts/{id}`
 - `GET /api/admin/ai-logs`
 
 Care：
 
 - `GET /api/care/workbench`
 
-`/admin/prompts` 当前是预留模块：AI 使用后端内置安全 Prompt 与 DeepSeek provider，暂不提供可编辑但不生效的 Prompt 列表。
+`/admin/prompts` 现在是真实 Prompt 管理页：可读取和保存后端 `prompt_templates` 表中的 AI 助手系统 Prompt。启用状态下 DeepSeek provider 会读取该模板；停用或模板为空时自动回退到内置安全 Prompt。
+
+## 客户端和后台使用
+
+前台客户端：
+
+- 登录：`/login`
+- 注册：`/register`
+- 找回密码：`/forgot-password`，输入邮箱、验证码和新密码即可重置。
+- 知识视频：后台创建 `articleType=video` 且填写 `videoUrl` 后，前台 `/knowledge/{id}` 会展示原生视频播放器。
+
+后台管理：
+
+- 后台登录：`/admin/login`
+- 仪表盘：`/admin/dashboard`
+- 用户管理：`/admin/users`
+- 内容审核：`/admin/reviews`
+- 知识内容：`/admin/content`，可创建图文或视频知识，视频知识需要填写可直接访问的视频 URL。
+- Prompt 管理：`/admin/prompts`，保存后影响真实 DeepSeek 调用；本地未配置 DeepSeek key 时仍走 fallback。
+- AI 日志：`/admin/ai-logs`

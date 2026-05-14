@@ -79,6 +79,7 @@ def call_deepseek_assistant(
     settings: Settings,
     message: str,
     patients: list[dict[str, str]],
+    system_prompt: str | None = None,
 ) -> dict[str, Any]:
     api_key = settings.deepseek_api_key.get_secret_value().strip()
     if not api_key:
@@ -88,7 +89,7 @@ def call_deepseek_assistant(
     request_payload = {
         "model": settings.deepseek_model,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt or SYSTEM_PROMPT},
             {"role": "user", "content": build_user_prompt(message, patients)},
         ],
         "temperature": 0.2,

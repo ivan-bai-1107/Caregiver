@@ -13,7 +13,9 @@ export function LoginPage() {
     const result = await submit();
 
     if (!result.ok) {
-      toast.error(result.reason === "validation" ? "请先完善登录信息" : "登录失败，请稍后重试。");
+      toast.error(
+        result.reason === "validation" ? "请先完善登录信息" : result.message ?? "登录失败，请稍后重试。",
+      );
       return;
     }
 
@@ -84,10 +86,19 @@ export function LoginPage() {
 
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded border-border" />
+                <input
+                  type="checkbox"
+                  checked={draft.rememberMe}
+                  onChange={(event) => updateDraft("rememberMe", event.target.checked)}
+                  className="w-4 h-4 rounded border-border"
+                />
                 <span className="text-muted-foreground">记住我</span>
               </label>
-              <button type="button" className="text-primary">
+              <button
+                type="button"
+                onClick={() => navigate("/forgot-password")}
+                className="text-primary"
+              >
                 忘记密码?
               </button>
             </div>

@@ -11,6 +11,7 @@ import {
   Filter,
 } from "lucide-react";
 import { useRecordListState } from "@/features/records/state/useRecordListState";
+import { appRoutes } from "@/shared/constants/routes";
 
 export function RecordListPage() {
   const navigate = useNavigate();
@@ -86,7 +87,13 @@ export function RecordListPage() {
               AI记录
             </button>
             <button
-              onClick={() => navigate("/records/new")}
+              onClick={() =>
+                navigate(
+                  filterPatient === "all"
+                    ? appRoutes.newRecord
+                    : appRoutes.newRecordForPatient(filterPatient),
+                )
+              }
               className="flex items-center gap-1.5 px-3 py-2 bg-white/20 rounded-xl backdrop-blur-sm text-sm"
             >
               <Plus className="w-4 h-4" />

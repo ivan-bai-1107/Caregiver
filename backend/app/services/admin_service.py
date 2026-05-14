@@ -23,6 +23,8 @@ from app.schemas.admin import (
     AdminKnowledgeArticleUpdate,
     AdminLoginRequest,
     AdminMe,
+    AdminPromptTemplateOut,
+    AdminPromptTemplateUpdate,
     AdminTokenResponse,
     AdminUserOut,
     AdminReviewUpdate,
@@ -30,7 +32,11 @@ from app.schemas.admin import (
 )
 from app.schemas.base import PagedResponse
 from app.schemas.community import CommunityAuthor, CommunityCommentOut, CommunityPostOut
+from app.schemas.knowledge import KnowledgeCategoryOut
+from app.services.cache_service import invalidate_admin_dashboard_cache, invalidate_knowledge_categories_cache
 from app.services.community_service import recount_post_comments
+from app.services.knowledge_service import list_categories
+from app.services.prompt_service import list_prompt_templates, update_prompt_template
 
 
 def authenticate_admin(db: Session, payload: AdminLoginRequest) -> AdminTokenResponse:
@@ -167,6 +173,7 @@ def update_review_post(db: Session, post_id: str, payload: AdminReviewUpdate) ->
     db.commit()
     db.refresh(post)
     db.refresh(post, attribute_names=["author"])
+    invalidate_admin_dashboard_cache()
     return to_review_post_out(post)
 
 
@@ -203,6 +210,7 @@ def update_review_comment(db: Session, comment_id: str, payload: AdminReviewUpda
     db.commit()
     db.refresh(comment)
     db.refresh(comment, attribute_names=["author"])
+    invalidate_admin_dashboard_cache()
     return to_review_comment_out(comment)
 
 
@@ -218,6 +226,7 @@ def to_admin_article_out(article: KnowledgeArticle) -> AdminKnowledgeArticleOut:
         author_name=article.author_name,
         author_title=article.author_title,
         source=article.source,
+        video_url=article.video_url,
         read_time_minutes=article.read_time_minutes,
         cover_color=article.cover_color,
         status=article.status,
@@ -250,6 +259,10 @@ def list_admin_articles(db: Session, status_filter: str | None, page: int, page_
     )
 
 
+def list_admin_categories(db: Session) -> list[KnowledgeCategoryOut]:
+    return list_categories(db)
+
+
 def ensure_category(db: Session, category_id: str) -> KnowledgeCategory:
     category = db.scalar(select(KnowledgeCategory).where(KnowledgeCategory.id == category_id))
     if category is None:
@@ -268,6 +281,7 @@ def create_admin_article(db: Session, payload: AdminKnowledgeArticleCreate) -> A
         author_name=payload.author_name,
         author_title=payload.author_title,
         source=payload.source,
+        video_url=payload.video_url,
         read_time_minutes=payload.read_time_minutes,
         cover_color=payload.cover_color,
         status=payload.status,
@@ -277,6 +291,8 @@ def create_admin_article(db: Session, payload: AdminKnowledgeArticleCreate) -> A
     db.commit()
     db.refresh(article)
     db.refresh(article, attribute_names=["category"])
+    invalidate_knowledge_categories_cache()
+    invalidate_admin_dashboard_cache()
     return to_admin_article_out(article)
 
 
@@ -295,12 +311,15 @@ def update_admin_article(db: Session, article_id: str, payload: AdminKnowledgeAr
     article.author_name = payload.author_name
     article.author_title = payload.author_title
     article.source = payload.source
+    article.video_url = payload.video_url
     article.read_time_minutes = payload.read_time_minutes
     article.cover_color = payload.cover_color
     article.status = payload.status
     db.commit()
     db.refresh(article)
     db.refresh(article, attribute_names=["category"])
+    invalidate_knowledge_categories_cache()
+    invalidate_admin_dashboard_cache()
     return to_admin_article_out(article)
 
 
@@ -318,6 +337,8 @@ def update_admin_article_status(
     db.commit()
     db.refresh(article)
     db.refresh(article, attribute_names=["category"])
+    invalidate_knowledge_categories_cache()
+    invalidate_admin_dashboard_cache()
     return to_admin_article_out(article)
 
 
@@ -360,3 +381,15 @@ def get_ai_log(db: Session, log_id: str) -> AdminAiLogOut:
     if log is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="AI 日志不存在。")
     return to_ai_log_out(log)
+
+
+def list_admin_prompts(db: Session) -> list[AdminPromptTemplateOut]:
+    return list_prompt_templates(db)
+
+
+def update_admin_prompt(
+    db: Session,
+    prompt_id: str,
+    payload: AdminPromptTemplateUpdate,
+) -> AdminPromptTemplateOut:
+    return update_prompt_template(db, prompt_id, payload)

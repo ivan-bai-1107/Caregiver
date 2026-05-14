@@ -10,6 +10,7 @@ from app.models.patient import Patient
 from app.models.user import User
 from app.schemas.base import PagedResponse
 from app.schemas.care_record import CareMetricIn, CareMetricOut, CareRecordCreate, CareRecordOut, CareRecordUpdate
+from app.services.cache_service import invalidate_admin_dashboard_cache, invalidate_care_workbench_cache
 
 
 def ensure_patient_belongs_to_user(db: Session, user: User, patient_id: str) -> Patient:
@@ -145,6 +146,8 @@ def create_record(db: Session, user: User, payload: CareRecordCreate) -> CareRec
     db.commit()
     db.refresh(record)
     db.refresh(record, attribute_names=["metrics"])
+    invalidate_care_workbench_cache(user.id)
+    invalidate_admin_dashboard_cache()
     return to_record_out(record)
 
 
@@ -161,4 +164,6 @@ def update_record(db: Session, user: User, record_id: str, payload: CareRecordUp
     db.commit()
     db.refresh(record)
     db.refresh(record, attribute_names=["metrics"])
+    invalidate_care_workbench_cache(user.id)
+    invalidate_admin_dashboard_cache()
     return to_record_out(record)

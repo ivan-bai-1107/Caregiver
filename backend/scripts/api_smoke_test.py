@@ -59,17 +59,45 @@ def get_redis_value(key: str) -> str | None:
         return None
 
 
-def assert_registration_code_flow(base_url: str, suffix: str) -> None:
+def redis_is_available() -> bool:
+    try:
+        from redis import Redis
+        from redis.exceptions import RedisError
+
+        client = Redis.from_url(
+            REDIS_URL,
+            decode_responses=True,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
+        return bool(client.ping())
+    except (ImportError, RedisError, OSError):
+        return False
+
+
+def extract_debug_code(payload: Any) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+    code = payload.get("debugCode")
+    if isinstance(code, str):
+        return code
+    data = payload.get("data")
+    if isinstance(data, dict) and isinstance(data.get("debugCode"), str):
+        return data["debugCode"]
+    return None
+
+
+def assert_registration_code_flow(base_url: str, suffix: str, redis_available: bool) -> None:
     email = f"redis-smoke-{suffix}@example.com"
     cache_key = f"email_code:{email}"
 
     with httpx.Client(base_url=base_url, timeout=10.0) as auth_client:
         code_data = unwrap(auth_client.post("/api/auth/email/send-code", json={"email": email}))
-        code = code_data.get("debugCode")
+        code = extract_debug_code(code_data)
         assert_true(isinstance(code, str) and len(code) == 6, "send-code did not return debug code")
 
-        cached_code = get_redis_value(cache_key)
-        if cached_code is not None:
+        cached_code = get_redis_value(cache_key) if redis_available else None
+        if redis_available:
             assert_true(cached_code == code, "redis cached email code should match generated code")
 
         register_data = unwrap(
@@ -86,8 +114,25 @@ def assert_registration_code_flow(base_url: str, suffix: str) -> None:
         token = register_data.get("token")
         assert_true(isinstance(token, str) and len(token) > 10, "register did not return token")
 
-        if cached_code is not None:
+        if redis_available:
             assert_true(get_redis_value(cache_key) is None, "redis email code should be deleted after register")
+
+
+def assert_send_code_cooldown(base_url: str, suffix: str, redis_available: bool) -> None:
+    if not redis_available:
+        print("redis unavailable; skipped send-code cooldown assertion")
+        return
+
+    email = f"cooldown-smoke-{suffix}@example.com"
+    with httpx.Client(base_url=base_url, timeout=10.0) as auth_client:
+        first = unwrap(auth_client.post("/api/auth/email/send-code", json={"email": email}))
+        assert_true(extract_debug_code(first) is not None, "first cooldown send-code did not return debug code")
+
+        second = auth_client.post("/api/auth/email/send-code", json={"email": email})
+        assert_true(second.status_code == 429, "second send-code should trigger cooldown")
+        payload = second.json()
+        assert_true(payload.get("success") is False, "cooldown response should be success=false")
+        assert_true("频繁" in str(payload.get("message", "")), "cooldown response should be friendly")
 
 
 def assert_ai_base_shape(data: dict[str, Any], expected_intent: str, expected_draft_type: str | None) -> None:
@@ -275,7 +320,16 @@ def main() -> None:
     unique_suffix = now.strftime("%Y%m%d%H%M%S")
     patient_name = f"冒烟测试患者{unique_suffix}"
 
-    assert_registration_code_flow(BASE_URL, unique_suffix)
+    with httpx.Client(base_url=BASE_URL, timeout=10.0) as health_client:
+        health = unwrap(health_client.get("/health"))
+    assert_true(isinstance(health, dict), "/health data should be an object")
+    assert_true("redis" in health, "/health should include redis status")
+    redis_available = health.get("redis") == "ok" and redis_is_available()
+    if not redis_available:
+        print("redis unavailable; redis-specific assertions will be skipped")
+
+    assert_registration_code_flow(BASE_URL, unique_suffix, redis_available)
+    assert_send_code_cooldown(BASE_URL, unique_suffix, redis_available)
 
     with httpx.Client(base_url=BASE_URL, timeout=10.0) as client:
         login_data = unwrap(

@@ -7,12 +7,15 @@ import type {
   AdminKnowledgeArticleDraft,
   AdminLoginResponse,
   AdminMe,
+  AdminPromptTemplate,
+  AdminPromptTemplateDraft,
   AdminReviewUpdatePayload,
   AdminUser,
   AdminUserStatus,
   PagedResponse,
 } from "@/features/admin/model";
 import type { CommunityComment, CommunityPost, CommunityReviewStatus } from "@/features/community/model";
+import type { KnowledgeCategory } from "@/features/knowledge/model";
 
 export const ADMIN_TOKEN_STORAGE_KEY = "care-app-admin-token";
 
@@ -94,6 +97,10 @@ export async function listAdminKnowledgeArticles(
   );
 }
 
+export async function listAdminKnowledgeCategories() {
+  return apiClient.get<KnowledgeCategory[]>("/api/admin/knowledge/categories", undefined, adminOptions());
+}
+
 export async function createAdminKnowledgeArticle(draft: AdminKnowledgeArticleDraft) {
   return apiClient.post<AdminKnowledgeArticle>("/api/admin/knowledge/articles", draft, adminOptions());
 }
@@ -108,6 +115,14 @@ export async function updateAdminKnowledgeArticleStatus(articleId: string, statu
     { status },
     adminOptions(),
   );
+}
+
+export async function listAdminPrompts() {
+  return apiClient.get<AdminPromptTemplate[]>("/api/admin/prompts", undefined, adminOptions());
+}
+
+export async function updateAdminPrompt(promptId: string, draft: AdminPromptTemplateDraft) {
+  return apiClient.put<AdminPromptTemplate>(`/api/admin/prompts/${promptId}`, draft, adminOptions());
 }
 
 export async function listAdminAiLogs(params: { intent?: string; page?: number; pageSize?: number } = {}) {

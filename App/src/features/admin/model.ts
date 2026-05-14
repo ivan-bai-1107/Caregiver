@@ -3,6 +3,7 @@ import type { CommunityComment, CommunityPost, CommunityReviewStatus } from "@/f
 export type AdminUserStatus = "active" | "disabled";
 export type AdminArticleStatus = "published" | "draft" | "archived";
 export type AdminKnowledgeArticleType = "article" | "video";
+export type AdminPromptStatus = "active" | "disabled";
 
 export interface PagedResponse<T> {
   items?: T[];
@@ -50,6 +51,7 @@ export interface AdminKnowledgeArticleDraft {
   authorName: string;
   authorTitle: string;
   source: string;
+  videoUrl: string;
   readTimeMinutes: number;
   coverColor: string;
   status: AdminArticleStatus;
@@ -79,6 +81,25 @@ export interface AdminAiLog {
   createdAt: string;
 }
 
+export interface AdminPromptTemplate {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  content: string;
+  status: AdminPromptStatus;
+  isSystem: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminPromptTemplateDraft {
+  name: string;
+  description: string;
+  content: string;
+  status: AdminPromptStatus;
+}
+
 export type AdminReviewItem =
   | { type: "post"; item: CommunityPost }
   | { type: "comment"; item: CommunityComment };
@@ -105,6 +126,11 @@ export const adminReviewStatusLabels: Record<CommunityReviewStatus, string> = {
   rejected: "已拒绝",
 };
 
+export const adminPromptStatusLabels: Record<AdminPromptStatus, string> = {
+  active: "启用",
+  disabled: "停用",
+};
+
 export function createEmptyArticleDraft(categoryId = ""): AdminKnowledgeArticleDraft {
   return {
     categoryId,
@@ -115,6 +141,7 @@ export function createEmptyArticleDraft(categoryId = ""): AdminKnowledgeArticleD
     authorName: "护理知识编辑",
     authorTitle: "护理内容团队",
     source: "系统知识库",
+    videoUrl: "",
     readTimeMinutes: 5,
     coverColor: "primary",
     status: "draft",

@@ -13,7 +13,9 @@ from app.models.user import User
 from app.models.utils import new_id
 from app.schemas.ai import AiAssistantRequest, AiAssistantResponse
 from app.schemas.base import CamelModel, to_camel
+from app.services.cache_service import invalidate_admin_dashboard_cache
 from app.services.deepseek_service import DeepSeekServiceError, call_deepseek_assistant
+from app.services.prompt_service import get_active_ai_system_prompt
 
 AIIntent = Literal["qa", "care_record", "care_task", "form_prefill"]
 DraftType = Literal["record", "task"] | None
@@ -405,6 +407,7 @@ def should_use_deepseek() -> bool:
 
 
 def build_deepseek_response(
+    db: Session,
     conversation_id: str,
     patients: list[Patient],
     message: str,
@@ -414,6 +417,7 @@ def build_deepseek_response(
         settings=settings,
         message=message,
         patients=patient_prompt_context(patients),
+        system_prompt=get_active_ai_system_prompt(db),
     )
     return validate_provider_response(conversation_id, raw_response, patients)
 
@@ -432,6 +436,7 @@ def write_ai_log(db: Session, user: User, message: str, response: AiAssistantRes
         )
     )
     db.commit()
+    invalidate_admin_dashboard_cache()
 
 
 def handle_assistant_message(db: Session, user: User, payload: AiAssistantRequest) -> AiAssistantResponse:
@@ -440,7 +445,7 @@ def handle_assistant_message(db: Session, user: User, payload: AiAssistantReques
 
     if should_use_deepseek():
         try:
-            response = build_deepseek_response(conversation_id, patients, payload.message)
+            response = build_deepseek_response(db, conversation_id, patients, payload.message)
         except (DeepSeekServiceError, ValidationError, ValueError, TypeError, KeyError):
             response = build_rule_based_response(conversation_id, patients, payload.message)
     else:

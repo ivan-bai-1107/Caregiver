@@ -1,90 +1,73 @@
 import { useNavigate } from "react-router";
-import { Heart, User, Mail, Lock, Send } from "lucide-react";
-import { toast, Toaster } from "sonner";
-import { useRegisterFormState } from "@/features/auth/state/useRegisterFormState";
+import { ArrowLeft, Heart, Lock, Mail, Send } from "lucide-react";
+import { Toaster, toast } from "sonner";
+import { useForgotPasswordState } from "@/features/auth/state/useForgotPasswordState";
 
-export function RegisterPage() {
+export function ForgotPasswordPage() {
   const navigate = useNavigate();
   const {
     draft,
     fieldErrors,
     formError,
-    isSubmitting,
     isSendingCode,
+    isSubmitting,
     countdown,
     updateDraft,
     requestCode,
     submit,
-  } = useRegisterFormState();
+  } = useForgotPasswordState();
 
-  const handleSendCode = async () => {
+  async function handleSendCode() {
     const result = await requestCode();
-
     if (!result.ok) {
       toast.error(result.message ?? "验证码发送失败，请稍后重试。");
       return;
     }
-
     toast.success("验证码已发送");
-  };
+  }
 
-  const handleRegister = async (event: React.FormEvent) => {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-
     const result = await submit();
 
     if (!result.ok) {
       toast.error(
-        result.reason === "validation" ? "请先完善注册信息" : result.message ?? "注册失败，请稍后重试。",
+        result.reason === "validation" ? "请先完善重置信息" : result.message ?? "密码重置失败，请稍后重试。",
       );
       return;
     }
 
-    toast.success("注册成功");
-    navigate("/");
-  };
+    toast.success("密码已重置，请使用新密码登录");
+    setTimeout(() => navigate("/login"), 600);
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex flex-col items-center justify-center p-6">
       <Toaster position="top-center" richColors />
 
       <div className="w-full max-w-md">
+        <button
+          onClick={() => navigate("/login")}
+          className="mb-5 flex items-center gap-2 text-sm text-muted-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          返回登录
+        </button>
+
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-primary/10 mb-6">
             <Heart className="w-10 h-10 text-primary" fill="currentColor" />
           </div>
           <h1 className="text-3xl mb-2" style={{ fontFamily: "var(--font-display)" }}>
-            创建账号
+            找回密码
           </h1>
-          <p className="text-muted-foreground text-sm">开始您的专业护理之旅</p>
+          <p className="text-muted-foreground text-sm">通过邮箱验证码重置登录密码</p>
         </div>
 
         <div className="bg-card rounded-3xl shadow-lg p-8">
-          <form onSubmit={handleRegister} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm mb-2 text-foreground/80">
-                用户名 <span className="text-destructive">*</span>
-              </label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={draft.username}
-                  onChange={(event) => updateDraft("username", event.target.value)}
-                  className="w-full pl-12 pr-4 py-3.5 bg-input-background rounded-2xl border border-transparent focus:border-primary focus:outline-none transition-colors"
-                  placeholder="请输入用户名"
-                  required
-                />
-              </div>
-              {fieldErrors.username ? (
-                <p className="mt-2 text-xs text-destructive">{fieldErrors.username}</p>
-              ) : null}
-            </div>
-
-            <div>
-              <label className="block text-sm mb-2 text-foreground/80">
-                邮箱地址 <span className="text-destructive">*</span>
-              </label>
+              <label className="block text-sm mb-2 text-foreground/80">邮箱地址</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
@@ -92,19 +75,15 @@ export function RegisterPage() {
                   value={draft.email}
                   onChange={(event) => updateDraft("email", event.target.value)}
                   className="w-full pl-12 pr-4 py-3.5 bg-input-background rounded-2xl border border-transparent focus:border-primary focus:outline-none transition-colors"
-                  placeholder="请输入邮箱"
+                  placeholder="请输入注册邮箱"
                   required
                 />
               </div>
-              {fieldErrors.email ? (
-                <p className="mt-2 text-xs text-destructive">{fieldErrors.email}</p>
-              ) : null}
+              {fieldErrors.email ? <p className="mt-2 text-xs text-destructive">{fieldErrors.email}</p> : null}
             </div>
 
             <div>
-              <label className="block text-sm mb-2 text-foreground/80">
-                验证码 <span className="text-destructive">*</span>
-              </label>
+              <label className="block text-sm mb-2 text-foreground/80">验证码</label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Send className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -126,15 +105,11 @@ export function RegisterPage() {
                   {isSendingCode ? "发送中..." : countdown > 0 ? `${countdown}秒` : "发送"}
                 </button>
               </div>
-              {fieldErrors.code ? (
-                <p className="mt-2 text-xs text-destructive">{fieldErrors.code}</p>
-              ) : null}
+              {fieldErrors.code ? <p className="mt-2 text-xs text-destructive">{fieldErrors.code}</p> : null}
             </div>
 
             <div>
-              <label className="block text-sm mb-2 text-foreground/80">
-                密码 <span className="text-destructive">*</span>
-              </label>
+              <label className="block text-sm mb-2 text-foreground/80">新密码</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
@@ -142,19 +117,15 @@ export function RegisterPage() {
                   value={draft.password}
                   onChange={(event) => updateDraft("password", event.target.value)}
                   className="w-full pl-12 pr-4 py-3.5 bg-input-background rounded-2xl border border-transparent focus:border-primary focus:outline-none transition-colors"
-                  placeholder="请输入密码"
+                  placeholder="请输入新密码"
                   required
                 />
               </div>
-              {fieldErrors.password ? (
-                <p className="mt-2 text-xs text-destructive">{fieldErrors.password}</p>
-              ) : null}
+              {fieldErrors.password ? <p className="mt-2 text-xs text-destructive">{fieldErrors.password}</p> : null}
             </div>
 
             <div>
-              <label className="block text-sm mb-2 text-foreground/80">
-                确认密码 <span className="text-destructive">*</span>
-              </label>
+              <label className="block text-sm mb-2 text-foreground/80">确认新密码</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
@@ -162,7 +133,7 @@ export function RegisterPage() {
                   value={draft.confirmPassword}
                   onChange={(event) => updateDraft("confirmPassword", event.target.value)}
                   className="w-full pl-12 pr-4 py-3.5 bg-input-background rounded-2xl border border-transparent focus:border-primary focus:outline-none transition-colors"
-                  placeholder="请再次输入密码"
+                  placeholder="请再次输入新密码"
                   required
                 />
               </div>
@@ -182,16 +153,9 @@ export function RegisterPage() {
               disabled={isSubmitting}
               className="w-full py-4 bg-primary text-primary-foreground rounded-2xl hover:bg-primary/90 transition-colors shadow-md mt-6 disabled:opacity-70"
             >
-              {isSubmitting ? "注册中..." : "注册"}
+              {isSubmitting ? "重置中..." : "重置密码"}
             </button>
           </form>
-
-          <div className="mt-6 text-center">
-            <span className="text-muted-foreground text-sm">已有账号? </span>
-            <button onClick={() => navigate("/login")} className="text-primary text-sm">
-              立即登录
-            </button>
-          </div>
         </div>
       </div>
     </div>

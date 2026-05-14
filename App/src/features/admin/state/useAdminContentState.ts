@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import type { KnowledgeCategory } from "@/features/knowledge/model";
-import { listKnowledgeCategories } from "@/features/knowledge/services/knowledge.service";
 import type {
   AdminArticleStatus,
   AdminKnowledgeArticle,
@@ -9,6 +8,7 @@ import type {
 import { createEmptyArticleDraft } from "@/features/admin/model";
 import {
   createAdminKnowledgeArticle,
+  listAdminKnowledgeCategories,
   listAdminKnowledgeArticles,
   updateAdminKnowledgeArticle,
   updateAdminKnowledgeArticleStatus,
@@ -32,7 +32,7 @@ export function useAdminContentState() {
     try {
       const [articleResponse, nextCategories] = await Promise.all([
         listAdminKnowledgeArticles({ status: status === "all" ? undefined : status, page: 1, pageSize: 50 }),
-        listKnowledgeCategories(),
+        listAdminKnowledgeCategories(),
       ]);
       setArticles(articleResponse.items ?? []);
       setCategories(nextCategories);
@@ -64,6 +64,7 @@ export function useAdminContentState() {
       authorName: article.authorName,
       authorTitle: article.authorTitle,
       source: article.source,
+      videoUrl: article.videoUrl,
       readTimeMinutes: article.readTimeMinutes,
       coverColor: article.coverColor,
       status: article.status,
