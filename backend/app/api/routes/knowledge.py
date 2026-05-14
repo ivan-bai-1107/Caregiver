@@ -18,6 +18,7 @@ from app.services.knowledge_service import (
     list_articles,
     list_categories,
     remove_article_bookmark,
+    remove_article_like,
 )
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
@@ -83,6 +84,15 @@ def like_article_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> dict[str, object]:
     return success_response(like_article(db, current_user, article_id))
+
+
+@router.delete("/articles/{article_id}/like")
+def remove_article_like_endpoint(
+    article_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, object]:
+    return success_response(remove_article_like(db, current_user, article_id))
 
 
 @router.post("/articles/{article_id}/bookmark")

@@ -202,6 +202,22 @@ def like_article(db: Session, user: User, article_id: str) -> KnowledgeArticleAc
     return to_action_state(db, user, article)
 
 
+def remove_article_like(db: Session, user: User, article_id: str) -> KnowledgeArticleActionState:
+    article = get_article_or_404(db, article_id)
+    existing = db.scalar(
+        select(UserKnowledgeLike).where(
+            UserKnowledgeLike.user_id == user.id,
+            UserKnowledgeLike.article_id == article.id,
+        )
+    )
+    if existing is not None:
+        db.delete(existing)
+        article.like_count = max(article.like_count - 1, 0)
+        db.commit()
+        db.refresh(article)
+    return to_action_state(db, user, article)
+
+
 def bookmark_article(db: Session, user: User, article_id: str) -> KnowledgeArticleActionState:
     article = get_article_or_404(db, article_id)
     existing = db.scalar(

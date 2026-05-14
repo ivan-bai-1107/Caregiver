@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Bookmark, BookOpen, ChevronRight, Clock, Eye, Heart, Share2, User } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronRight, Clock, Eye, Heart, Share2, User } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { useKnowledgeDetailState } from "@/features/knowledge/state/useKnowledgeDetailState";
 import { isShareCancelled, shareCurrentPage } from "@/shared/lib/share";
@@ -49,7 +49,6 @@ export function KnowledgeDetailPage() {
     error,
     retry,
     like,
-    toggleBookmark,
   } = useKnowledgeDetailState(id);
 
   async function handleShare() {
@@ -79,25 +78,7 @@ export function KnowledgeDetailPage() {
           <button onClick={() => navigate("/knowledge")} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <div className="flex items-center gap-2">
-            {article ? (
-              <button
-                onClick={() => void toggleBookmark()}
-                disabled={isMutating}
-                className="p-2 disabled:opacity-50"
-                aria-label="收藏文章"
-              >
-                <Bookmark className={`w-5 h-5 ${article.isBookmarked ? "fill-current" : ""}`} />
-              </button>
-            ) : null}
-            <button
-              className="p-2"
-              onClick={() => void handleShare()}
-              aria-label="分享文章"
-            >
-              <Share2 className="w-5 h-5" />
-            </button>
-          </div>
+          <div className="w-10" />
         </div>
       </div>
 

@@ -1,18 +1,8 @@
 import { useNavigate } from "react-router";
 import { BookOpen, MessageCircle, Plus, Search, Shield, ThumbsUp, Users } from "lucide-react";
-import { communityTagOptions, getCommunityStatusLabel, getCommunityTagLabel } from "@/features/community/model";
+import { communityTagOptions, getCommunityTagLabel } from "@/features/community/model";
 import { useCommunityListState } from "@/features/community/state/useCommunityListState";
 import { formatDateTimeLabel } from "@/shared/lib/date";
-
-function statusClass(status: string) {
-  if (status === "passed") {
-    return "bg-primary/10 text-primary";
-  }
-  if (status === "rejected") {
-    return "bg-accent/10 text-accent";
-  }
-  return "bg-chart-4/20 text-accent";
-}
 
 export function CommunityListPage() {
   const navigate = useNavigate();
@@ -82,7 +72,7 @@ export function CommunityListPage() {
           <div>
             <p className="text-sm font-medium text-foreground mb-1">合规交流区</p>
             <p className="text-xs text-muted-foreground">
-              发帖默认进入待审核状态，审核通过后对其他用户可见。请只分享护理经验、工具与照护问题。
+              发帖会进入后台审核，通过后对其他用户可见。请只分享护理经验、工具与照护问题。
             </p>
           </div>
         </div>
@@ -136,9 +126,6 @@ export function CommunityListPage() {
                       <span className="text-xs text-muted-foreground">{formatDateTimeLabel(post.createdAt)}</span>
                       <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded">
                         {getCommunityTagLabel(post.tag)}
-                      </span>
-                      <span className={`px-2 py-0.5 text-xs rounded ${statusClass(post.status)}`}>
-                        {getCommunityStatusLabel(post.status)}
                       </span>
                     </div>
                     <h3 className="font-medium mb-2">{post.title}</h3>

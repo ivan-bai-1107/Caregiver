@@ -38,6 +38,10 @@ export async function likeKnowledgeArticle(articleId: string) {
   return apiClient.post<KnowledgeArticleActionState>(`/api/knowledge/articles/${articleId}/like`, {});
 }
 
+export async function removeKnowledgeArticleLike(articleId: string) {
+  return apiClient.delete<KnowledgeArticleActionState>(`/api/knowledge/articles/${articleId}/like`);
+}
+
 export async function bookmarkKnowledgeArticle(articleId: string) {
   return apiClient.post<KnowledgeArticleActionState>(`/api/knowledge/articles/${articleId}/bookmark`, {});
 }

@@ -5,25 +5,13 @@ import {
   ChevronRight,
   Flag,
   MessageCircle,
-  Share2,
   ThumbsUp,
   User,
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
-import { getCommunityStatusLabel, getCommunityTagLabel } from "@/features/community/model";
+import { getCommunityTagLabel } from "@/features/community/model";
 import { useCommunityDetailState } from "@/features/community/state/useCommunityDetailState";
 import { formatDateTimeLabel } from "@/shared/lib/date";
-import { isShareCancelled, shareCurrentPage } from "@/shared/lib/share";
-
-function statusClass(status: string) {
-  if (status === "passed") {
-    return "bg-primary/10 text-primary";
-  }
-  if (status === "rejected") {
-    return "bg-accent/10 text-accent";
-  }
-  return "bg-chart-4/20 text-accent";
-}
 
 export function CommunityDetailPage() {
   const navigate = useNavigate();
@@ -72,25 +60,6 @@ export function CommunityDetailPage() {
       toast.success("举报已提交，后台会尽快处理");
     } catch {
       toast.error("举报提交失败，请稍后重试");
-    }
-  }
-
-  async function handleShare() {
-    if (!post) {
-      return;
-    }
-
-    try {
-      const result = await shareCurrentPage({
-        title: post.title,
-        text: `Caregiver 护理助手社区：${post.title}`,
-      });
-      toast.success(result === "shared" ? "分享面板已打开" : "帖子链接已复制");
-    } catch (shareError) {
-      if (isShareCancelled(shareError)) {
-        return;
-      }
-      toast.error("分享失败，请稍后重试");
     }
   }
 
@@ -172,9 +141,6 @@ export function CommunityDetailPage() {
                     <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded">
                       {getCommunityTagLabel(post.tag)}
                     </span>
-                    <span className={`px-2 py-0.5 text-xs rounded ${statusClass(post.status)}`}>
-                      {getCommunityStatusLabel(post.status)}
-                    </span>
                   </div>
                   <p className="text-sm text-muted-foreground">{formatDateTimeLabel(post.createdAt)}</p>
                 </div>
@@ -203,13 +169,6 @@ export function CommunityDetailPage() {
                   <MessageCircle className="w-5 h-5" />
                   <span>{visibleCommentCount}</span>
                 </div>
-                <button
-                  className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors ml-auto"
-                  onClick={() => void handleShare()}
-                >
-                  <Share2 className="w-5 h-5" />
-                  <span>分享</span>
-                </button>
               </div>
             </div>
 
@@ -226,9 +185,6 @@ export function CommunityDetailPage() {
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <span className="font-medium text-sm">{item.author.username}</span>
                           <span className="text-xs text-muted-foreground">{formatDateTimeLabel(item.createdAt)}</span>
-                          <span className={`px-2 py-0.5 text-xs rounded ${statusClass(item.status)}`}>
-                            {getCommunityStatusLabel(item.status)}
-                          </span>
                         </div>
                         <p className="text-sm text-foreground/80">{item.content}</p>
                       </div>
@@ -318,7 +274,7 @@ export function CommunityDetailPage() {
       </div>
 
       {post && !error ? (
-        <div className="fixed bottom-0 left-0 right-0 px-6 py-4 border-t border-border bg-card">
+        <div className="fixed bottom-0 left-0 right-0 mobile-fixed-page-footer border-t border-border bg-card">
           <div className="max-w-lg mx-auto">
             <div className="flex items-center gap-2">
               <input

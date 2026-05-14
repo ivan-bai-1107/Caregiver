@@ -15,7 +15,7 @@ export function PostFormPage() {
     const post = await submit();
     if (post) {
       toast.success("帖子已提交审核");
-      window.setTimeout(() => navigate(`/community/${post.id}`), 500);
+      window.setTimeout(() => navigate("/community"), 500);
     }
   }
 

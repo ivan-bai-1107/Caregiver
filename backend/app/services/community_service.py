@@ -84,8 +84,8 @@ def to_comment_out(comment: CommunityComment) -> CommunityCommentOut:
     )
 
 
-def visible_post_filters(user: User) -> list[object]:
-    return [or_(CommunityPost.status == "passed", CommunityPost.author_id == user.id)]
+def visible_post_filters(_: User) -> list[object]:
+    return [CommunityPost.status == "passed"]
 
 
 def get_post_or_404(db: Session, user: User, post_id: str) -> CommunityPost:

@@ -10,6 +10,7 @@ import {
   getRelatedKnowledgeArticles,
   likeKnowledgeArticle,
   recordKnowledgeArticleView,
+  removeKnowledgeArticleLike,
   removeKnowledgeArticleBookmark,
 } from "@/features/knowledge/services/knowledge.service";
 
@@ -70,7 +71,9 @@ export function useKnowledgeDetailState(articleId: string | undefined) {
 
     setIsMutating(true);
     try {
-      const state = await likeKnowledgeArticle(article.id);
+      const state = article.isLiked
+        ? await removeKnowledgeArticleLike(article.id)
+        : await likeKnowledgeArticle(article.id);
       setArticle((current) => (current ? applyActionState(current, state) : current));
     } finally {
       setIsMutating(false);
