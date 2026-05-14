@@ -1,213 +1,230 @@
 # 医疗照顾者客户端系统项目解析
 
-本文档基于当前仓库代码整理，用于后续毕业设计论文撰写参考。项目名称可表述为“医疗照顾者的客户端系统设计与实现”。系统面向家庭照护者、护理人员和后台内容管理员，提供患者管理、护理记录、护理任务、健康趋势、AI 护理助手、护理知识学习、社区交流和后台运营管理等能力。
+> 本文档基于当前仓库代码和分轮审计结果整理，用于毕业设计论文中“需求分析、总体设计、详细设计、数据库设计、系统实现、系统测试、总结与展望”等章节参考。文档内容以 `client/`、`admin/`、`server/` 当前实现为依据，并明确区分“已实现能力”“接口层支持但页面未充分展开”“预留/降级功能”和“后续扩展”。
 
-## 1. 项目总体定位
+项目名称可表述为：**医疗照顾者的客户端系统设计与实现**。
 
-本项目是一个前后端分离的护理辅助系统。前台客户端以移动端 Web 体验为主，适合照护者在手机或平板上记录患者护理信息；后台管理端面向管理员，负责用户、社区审核、知识内容、Prompt 模板和 AI 日志管理；服务端提供统一 API、数据持久化、认证授权、缓存限流、邮件验证码、AI 调用和第三方内容审核。
+---
 
-系统核心目标包括：
+## 1. 项目概述
 
-1. 帮助照护者集中管理多个患者的基础信息、护理记录和护理任务。
-2. 通过结构化指标记录血压、血糖、体温、心率、用药、饮食等护理数据。
-3. 基于趋势图和 AI 分析辅助照护者理解近期健康变化。
-4. 通过 AI 护理助手生成护理记录草稿、任务草稿和护理问答回复。
-5. 提供知识学习与社区交流模块，形成护理经验沉淀。
-6. 为后台提供数据统计、内容管理、审核与 AI 运维管理能力。
+### 1.1 项目背景
 
-## 2. 技术架构
+随着老龄化程度加深以及慢性病长期管理需求增长，家庭照护者和护理人员在日常护理过程中需要记录患者基础信息、护理事件、健康指标、任务提醒和异常变化。传统手工记录方式存在数据分散、回顾困难、趋势不清晰、护理任务易遗漏等问题。
 
-### 2.1 总体架构
+本系统面向医疗照顾者日常护理场景，构建一个前后端分离的护理辅助系统。系统通过患者管理、护理记录、护理任务、健康趋势、AI 护理助手、护理知识学习、社区交流和后台管理模块，帮助照护者更高效地完成护理记录、任务安排和健康观察。
 
-项目采用前后端分离架构，主要由三个部分组成：
+### 1.2 系统目标
 
-| 层级 | 目录 | 技术栈 | 主要职责 |
-| --- | --- | --- | --- |
-| 客户端 | `client/` | React、TypeScript、Vite、Tailwind CSS、React Router、Recharts、lucide-react | 面向照护者的移动端页面、表单、状态管理、API 调用 |
-| 后台管理端 | `admin/` | React、TypeScript，与客户端共用 Vite 构建和 `apiClient` | 管理员登录、统计看板、用户管理、社区审核、知识管理、Prompt 管理、AI 日志 |
-| 服务端 | `server/` | FastAPI、SQLAlchemy、Alembic、PostgreSQL、Redis、DeepSeek API、SMTP | 统一 API、业务服务、数据库访问、缓存限流、AI、邮件、内容审核 |
+系统建设目标包括：
 
-系统运行依赖：
+1. 建立照护者视角下的患者基础档案管理能力。
+2. 使用结构化方式记录血压、血糖、体温、心率、用药、饮食等护理数据。
+3. 通过护理任务模块辅助照护者安排每日护理事项并跟踪完成情况。
+4. 基于结构化指标生成健康趋势图和趋势分析结果。
+5. 通过 AI 护理助手生成护理记录草稿、护理任务草稿和护理问答回复。
+6. 通过知识学习模块沉淀护理知识，通过社区模块支持经验交流。
+7. 通过后台管理端实现用户、社区审核、知识内容、Prompt 模板和 AI 日志管理。
+8. 通过 Redis、SMTP、DeepSeek、内容审核等工程机制提升系统可用性、安全性和可扩展性。
 
-| 组件 | 用途 |
+### 1.3 用户角色
+
+| 用户角色 | 主要职责与需求 |
 | --- | --- |
-| PostgreSQL | 主业务数据库，存储用户、患者、护理记录、知识、社区、AI 日志等数据 |
-| Redis | 验证码缓存、限流、聚合接口缓存、趋势数据缓存、AI 趋势分析缓存 |
-| DeepSeek | AI 护理助手真实模型能力，未配置时走规则 fallback |
-| QQ 邮箱 SMTP | 真实发送邮箱验证码，本地开发可使用 console 模式 |
-| Apizero 内容审核 API | 对社区评论进行第三方文本审核 |
+| 照护者 / 普通用户 | 注册登录、管理患者、记录护理数据、创建护理任务、查看趋势、使用 AI 助手、学习知识、参与社区 |
+| 后台管理员 | 登录后台、查看运营统计、管理用户、审核社区帖子、管理知识内容、维护 Prompt 模板、查看 AI 日志 |
 
-### 2.2 架构关系图
+---
+
+## 2. 需求分析
+
+### 2.1 功能性需求
+
+| 模块 | 功能需求 |
+| --- | --- |
+| 认证模块 | 邮箱验证码注册、邮箱密码登录、找回密码、记住我、当前用户信息、退出登录 |
+| 患者管理 | 患者列表、新增患者、患者详情、编辑患者 |
+| 护理记录 | 新增护理记录、记录列表、结构化指标存储、记录详情/更新接口支持、AI 草稿确认保存 |
+| 护理任务 | 新增任务、任务列表、按状态和患者筛选、完成任务 |
+| 健康趋势 | 按患者和指标查看趋势，支持近 7 天、近 30 天、自定义时间范围，支持趋势分析 |
+| 照护工作台 | 聚合展示患者、近期记录、待办任务、逾期任务和统计信息 |
+| AI 护理助手 | 护理问答、护理记录草稿、护理任务草稿、流式展示、AI 调用日志 |
+| 知识学习 | 知识分类、文章/视频知识列表、详情、浏览、点赞、收藏、相关推荐 |
+| 社区交流 | 发帖、评论、点赞、收藏、举报、相关讨论、作者其他讨论 |
+| 个人中心 | 个人资料、头像、用户统计、通知设置、偏好设置、静态说明页 |
+| 后台管理 | 管理员登录、Dashboard、用户管理、社区帖子审核、知识内容管理、Prompt 模板管理、AI 日志 |
+
+### 2.2 非功能性需求
+
+| 类型 | 需求说明 |
+| --- | --- |
+| 安全性 | 密码哈希存储，JWT 鉴权，普通用户与管理员 token 分离，敏感配置使用环境变量 |
+| 可用性 | DeepSeek、Redis、SMTP、内容审核等外部能力异常时，核心业务尽量保持可用或给出友好错误 |
+| 可维护性 | 前端按 app/shared/entities/features 分层，后端按 router/schema/service/model 分层 |
+| 可扩展性 | 护理指标、知识内容、Prompt 模板、AI provider、内容审核服务均可扩展 |
+| 数据一致性 | 护理记录和指标分表，AI 结构化草稿必须人工确认后保存 |
+| 性能 | Redis 用于验证码、限流、聚合接口缓存、趋势缓存和 AI 分析缓存 |
+| 可测试性 | 提供接口级 smoke test，覆盖认证、患者、记录、任务、趋势、AI、知识、社区和后台主链路 |
+
+---
+
+## 3. 系统总体设计
+
+### 3.1 总体架构
+
+项目采用前后端分离架构，主要由前台客户端、后台管理端、后端服务、数据库、缓存和外部服务组成。
 
 ```mermaid
 flowchart LR
-    Client["client 前台客户端"] --> API["FastAPI /api"]
-    Admin["admin 后台管理端"] --> API
-    API --> DB["PostgreSQL"]
-    API --> Redis["Redis"]
-    API --> SMTP["QQ 邮箱 SMTP"]
-    API --> DeepSeek["DeepSeek API"]
-    API --> Moderation["Apizero 内容审核 API"]
-    API --> Uploads["server/uploads 静态头像文件"]
+    User[照护者] --> Client[client 前台客户端]
+    AdminUser[管理员] --> Admin[admin 后台管理端]
+    Client --> API[FastAPI API]
+    Admin --> API
+    API --> DB[(PostgreSQL)]
+    API --> Redis[(Redis)]
+    API --> SMTP[QQ 邮箱 SMTP / Console]
+    API --> LLM[DeepSeek API]
+    API --> Moderation[内容审核 API / 本地关键词]
+    API --> Uploads[uploads 静态资源]
 ```
 
-## 3. 仓库结构设计
+### 3.2 技术选型
 
-当前仓库根目录按运行职责组织：
+| 层级 | 目录 | 技术栈 | 说明 |
+| --- | --- | --- | --- |
+| 前台客户端 | `client/` | React、TypeScript、Vite、React Router、Tailwind CSS、Recharts、Radix UI、MUI、sonner | 面向照护者的移动端 Web 客户端 |
+| 后台管理端 | `admin/` | React、TypeScript，经 `@admin` alias 接入前端构建 | 面向管理员的后台管理页面 |
+| 服务端 | `server/` | FastAPI、Pydantic、SQLAlchemy 2.x、Alembic、python-jose、passlib、httpx、redis | 业务 API、鉴权、数据访问、AI、缓存、邮件 |
+| 数据库 | PostgreSQL 16 | 关系型数据库 | 存储用户、患者、护理记录、任务、知识、社区、AI 日志等数据 |
+| 缓存 | Redis 7 | 键值缓存 | 验证码、限流、聚合接口缓存、趋势缓存 |
+| AI 服务 | DeepSeek + fallback | 服务端调用 | AI 问答、草稿生成、趋势分析 |
+| 邮件服务 | QQ SMTP / console | 服务端发送 | 邮箱验证码发送，本地开发可使用 console/debugCode |
 
-| 路径 | 说明 |
+### 3.3 仓库结构
+
+| 路径 | 作用 |
 | --- | --- |
-| `client/` | 前台客户端源码与 Vite 构建配置 |
-| `admin/` | 后台管理端源码，借助 `client/vite.config.ts` 中的 `@admin` alias 引入 |
-| `server/` | FastAPI 后端、Alembic 迁移、脚本、环境变量示例 |
-| `docker-compose.yml` | PostgreSQL 与 Redis 本地容器编排，二者均在 `caregiver` bridge 网络 |
-| `api.yaml` | API 描述文件 |
-| `README.md`、`server/README.md` | 项目运行与环境配置文档 |
+| `client/` | 前台客户端源码与 Vite 配置 |
+| `admin/` | 后台管理端源码，通过 `client/vite.config.ts` 中的 `@admin` alias 接入 |
+| `server/` | FastAPI 后端、ORM 模型、Schema、业务服务、迁移脚本、seed、测试脚本 |
+| `docker-compose.yml` | PostgreSQL 和 Redis 本地容器编排 |
+| `README.md`、`server/README.md` | 启动、环境变量、Docker、SMTP、Redis、AI 和测试说明 |
+| `api.yaml` | 早期接口草稿，当前已落后于真实后端接口，最终接口应以 FastAPI OpenAPI 为准 |
 
-### 3.1 前台客户端结构
+### 3.4 前端结构
 
 `client/src` 采用接近 Feature-Sliced 的组织方式：
 
-| 路径 | 说明 |
+| 目录 | 说明 |
 | --- | --- |
-| `app/` | 路由、页面入口、全局 Provider、布局组件 |
-| `shared/` | 通用 API 客户端、认证工具、日期工具、主题、复用 UI |
-| `entities/` | 患者、护理记录、护理任务、趋势、AI 等领域实体类型和 mapper |
-| `features/` | 业务功能模块，如 auth、patients、records、tasks、trends、ai、knowledge、community、profile |
+| `app/` | 路由、页面入口、布局、全局组件 |
+| `shared/` | API client、认证存储、日期工具、通用 UI、主题等 |
+| `entities/` | 患者、护理记录、护理任务、AI、趋势等领域类型和 mapper |
+| `features/` | auth、home、patients、records、tasks、trends、ai、knowledge、community、profile、care 等业务模块 |
 
-前端请求统一通过 `client/src/shared/lib/apiClient.ts` 发起，保证请求路径、token 注入、统一响应解析和错误处理集中维护。前端字段采用 camelCase，后端模型与数据库字段采用 snake_case，中间由 Pydantic schema 和前端 mapper 进行转换。
+需要注意：当前仍有部分页面位于 `client/src/app/pages`，如登录、注册、患者列表、记录列表、趋势页和 AI 页面。因此论文中应表述为“以前端 feature 模块组织为主”，不要写成“所有页面均完全 feature 化”。
 
-### 3.2 后台管理端结构
+### 3.5 后端结构
 
-后台管理端位于 `admin/src/admin`：
+`server/app` 采用分层结构：
 
-| 路径 | 说明 |
+| 目录 | 说明 |
 | --- | --- |
-| `pages/` | 后台页面，包括登录、Dashboard、用户、审核、内容、Prompt、AI 日志 |
-| `services/admin.service.ts` | 后台 API 封装，使用独立管理员 token |
-| `state/` | 各后台页面状态 Hook |
-| `model.ts` | 后台 DTO、状态枚举和表单草稿类型 |
-
-后台 token 存储键为 `care-app-admin-token`，与前台用户 token 分离，避免前后台身份混用。
-
-### 3.3 服务端结构
-
-`server/app` 采用 Router、Schema、Service、Model 分层：
-
-| 路径 | 说明 |
-| --- | --- |
-| `api/routes/` | FastAPI 路由层，负责 HTTP 入参、依赖注入、统一响应 |
-| `schemas/` | Pydantic schema，负责请求与响应数据结构 |
-| `services/` | 业务逻辑层，封装查询、写入、缓存、AI、邮件等业务 |
+| `api/routes/` | FastAPI Router，负责 HTTP API、依赖注入和统一响应 |
+| `schemas/` | Pydantic DTO，负责请求/响应字段和 camelCase 转换 |
+| `services/` | 业务逻辑层，封装认证、患者、记录、任务、AI、缓存、邮件、审核等逻辑 |
 | `models/` | SQLAlchemy ORM 模型，与数据库表对应 |
-| `core/` | 配置、数据库、Redis、安全、响应包装 |
+| `core/` | 配置、数据库连接、Redis、鉴权、安全、统一响应 |
 
-`server/app/main.py` 注册所有 API 路由，挂载 `/uploads` 静态目录，配置 CORS，并将 HTTPException 和校验错误统一包装为：
-
-```json
-{ "success": false, "message": "错误提示" }
-```
-
-成功响应通过 `success_response` 包装为：
+后端成功响应统一为：
 
 ```json
 { "success": true, "data": {} }
 ```
 
+错误响应统一为：
+
+```json
+{ "success": false, "message": "错误提示" }
+```
+
+---
+
 ## 4. 前台功能模块设计
 
 ### 4.1 认证与账号模块
 
-涉及路径：
+前端路径：`client/src/features/auth`、`client/src/app/pages/LoginPage.tsx`、`RegisterPage.tsx`、`ForgotPasswordPage.tsx`。  
+后端路径：`server/app/api/routes/auth.py`、`server/app/services/auth_service.py`。
 
-| 前端 | 后端 |
-| --- | --- |
-| `client/src/features/auth` | `server/app/api/routes/auth.py`、`server/app/services/auth_service.py` |
+主要功能：
 
-功能包括：
+1. 邮箱验证码注册。
+2. 邮箱密码登录。
+3. 找回密码。
+4. 记住我：选择 localStorage 或 sessionStorage 保存 token。
+5. 获取当前用户信息。
+6. 退出登录。
 
-1. 登录：邮箱与密码登录，支持“记住我”。记住我开启时 token 写入 `localStorage`，否则写入 `sessionStorage`。
-2. 注册：通过邮箱验证码注册账号。
-3. 找回密码：通过邮箱验证码重置密码。
-4. 当前用户：前端通过 `/api/users/me` 获取当前登录用户。
-5. 退出登录：清理本地 token 与用户信息。
-
-验证码链路设计：
+验证码流程：
 
 ```mermaid
 sequenceDiagram
-    participant U as 用户
-    participant C as 客户端
+    participant C as 前端
     participant A as Auth API
     participant DB as PostgreSQL
     participant R as Redis
     participant M as SMTP/Console
-
-    U->>C: 输入邮箱并获取验证码
     C->>A: POST /api/auth/email/send-code
-    A->>R: 检查邮箱冷却和 IP 限流
-    A->>DB: 写入 email_verification_codes
+    A->>R: 检查邮箱冷却和 IP 频控
+    A->>DB: 写入验证码记录
     A->>R: 写入 email_code:{email}
-    A->>M: 发送验证码或控制台输出
-    A-->>C: 返回成功消息，debug 模式返回 debugCode
+    A->>M: 发送邮件或控制台输出
+    A-->>C: 返回发送结果，debug 模式包含 debugCode
 ```
 
-该流程保留数据库兜底，同时利用 Redis 加速验证码校验并实现限流。
+后端注册 Schema 接收 `username`、`email`、`code`、`password`。`confirmPassword` 只属于前端表单校验字段，不进入后端 Schema。
 
 ### 4.2 首页模块
 
-涉及路径：
+前端路径：`client/src/features/home`。  
+后端路径：`server/app/api/routes/home.py`、`home_service.py`。
 
-| 前端 | 后端 |
-| --- | --- |
-| `client/src/features/home` | `server/app/api/routes/home.py`、`server/app/services/home_service.py` |
-
-首页提供照护者的总览信息，包括：
-
-1. 待办任务数、已完成任务数、健康提醒数、任务提醒数。
-2. 近期健康异常提醒，如血压、血糖、体温、心率超过阈值。
-3. 近期任务列表，可快速查看待完成任务。
-4. 最近患者卡片，展示患者基础状态与最近动态。
-
-健康提醒由后端根据最新护理指标生成。例如收缩压大于等于 140、舒张压大于等于 90、血糖大于等于 11.1、体温大于等于 37.5、心率大于等于 100 时会形成提示。
+首页用于展示照护者当天工作概览，包括统计卡片、健康提醒、任务提醒和最近患者。健康提醒由后端根据最新结构化指标生成，例如血压、血糖、体温、心率超过阈值时形成提醒。
 
 ### 4.3 患者管理模块
 
-涉及路径：
+前端路径：`client/src/features/patients`、部分页面位于 `client/src/app/pages`。  
+后端路径：`server/app/api/routes/patients.py`、`patient_service.py`。
 
-| 前端 | 后端 |
+功能包括患者列表、新增患者、患者详情和编辑患者。患者正式字段保持 MVP 边界：
+
+| 字段 | 说明 |
 | --- | --- |
-| `client/src/features/patients` | `server/app/api/routes/patients.py`、`server/app/services/patient_service.py` |
+| `name` | 患者姓名 |
+| `age` | 年龄 |
+| `gender` | 性别：男、女、其他 |
+| `profileNote` | 护理说明 |
 
-功能包括：
-
-1. 患者列表：支持搜索患者姓名。
-2. 新增患者：录入姓名、年龄、性别、护理说明。
-3. 患者详情：聚合患者基础信息、护理记录、任务、血压趋势预览。
-4. 编辑患者：更新患者基础信息。
-
-患者表保持较简洁的 MVP 字段边界，复杂护理指标不写入患者表，而是通过护理记录与护理指标表扩展。
+患者详情页中的护理统计、近期记录、近期任务、趋势预览等属于派生展示数据，不扩展患者表字段。
 
 ### 4.4 护理记录模块
 
-涉及路径：
+前端路径：`client/src/features/records`、`client/src/app/pages/RecordListPage.tsx`。  
+后端路径：`server/app/api/routes/records.py`、`record_service.py`。
 
-| 前端 | 后端 |
-| --- | --- |
-| `client/src/features/records` | `server/app/api/routes/records.py`、`server/app/services/record_service.py` |
+护理记录采用“事件 + 指标”双层模型：
 
-护理记录采用 `care_record + care_metric` 双层结构：
+| 层级 | 表 | 作用 |
+| --- | --- | --- |
+| 护理事件 | `care_records` | 保存一次护理记录的患者、类型、时间、备注、来源 |
+| 护理指标 | `care_metrics` | 保存该记录下的结构化指标，如收缩压、舒张压、体温、血糖 |
 
-1. `care_records` 存储记录的主体信息，如患者、记录类型、发生时间、备注、来源。
-2. `care_metrics` 存储具体指标键值，如收缩压、舒张压、体温、血糖、心率、用药名称、用药剂量。
-
-这种设计避免把血压保存为 `"120/80"` 这类字符串，而是将收缩压和舒张压分别保存为两个数值指标，便于后续统计、趋势分析和异常判断。
-
-支持的记录类型包括：
+支持的记录类型：
 
 | 类型 | 说明 |
 | --- | --- |
-| `blood_pressure` | 血压，包含 `bloodPressureSystolic` 与 `bloodPressureDiastolic` |
+| `blood_pressure` | 血压 |
 | `temperature` | 体温 |
 | `blood_sugar` | 血糖 |
 | `heart_rate` | 心率 |
@@ -215,242 +232,259 @@ sequenceDiagram
 | `diet` | 饮食 |
 | `other` | 其他观察 |
 
-记录来源包括 `manual` 和 `ai`。手动录入和 AI 草稿确认后写入同一套结构，保证数据一致。
+血压必须拆分为：
+
+- `bloodPressureSystolic`
+- `bloodPressureDiastolic`
+
+而不是保存为 `120/80` 字符串。这样可以支持趋势图、异常判断和统计分析。
+
+当前后端支持护理记录列表、创建、详情和更新接口；前端路由主要覆盖列表和新增，独立记录详情页未充分展开。论文中应写“接口层支持详情与更新”，不要夸大为完整记录详情页面。
 
 ### 4.5 护理任务模块
 
-涉及路径：
+前端路径：`client/src/features/tasks`。  
+后端路径：`server/app/api/routes/tasks.py`、`task_service.py`。
 
-| 前端 | 后端 |
+任务字段包括：
+
+| 字段 | 说明 |
 | --- | --- |
-| `client/src/features/tasks` | `server/app/api/routes/tasks.py`、`server/app/services/task_service.py` |
+| `patientId` | 所属患者 |
+| `title` | 任务标题 |
+| `description` | 任务描述 |
+| `taskType` | 任务类型 |
+| `remindTime` | 提醒时间 |
+| `repeatRule` | 重复规则 |
+| `priority` | 优先级 |
+| `remindOffsetMinutes` | 提前提醒分钟数 |
+| `status` | 任务状态 |
 
-功能包括：
+任务状态以当前代码为准：
 
-1. 任务列表：支持全部、待执行、已逾期、已完成筛选。
-2. 按患者过滤任务。
-3. 新增任务：选择患者、任务类型、提醒时间、重复规则、优先级。
-4. 完成任务：调用后端接口更新任务状态。
+```text
+pending / completed / scheduled
+```
 
-任务类型包括血压、血糖、用药、饮食、康复、复诊、营养和其他。重复规则包括一次、每日、每周和每月。任务是否逾期由服务层根据当前时间与任务状态计算。
+任务模块已支持列表、创建、更新、详情接口和完成任务接口。但当前实现重点是任务记录与状态管理，不包含后台定时推送、消息队列或系统级通知推送。
 
 ### 4.6 照护工作台模块
 
-涉及路径：
+前端路径：`client/src/features/care`。  
+后端路径：`server/app/api/routes/care.py`、`care_service.py`。
 
-| 前端 | 后端 |
-| --- | --- |
-| `client/src/features/care` | `server/app/api/routes/care.py`、`server/app/services/care_service.py` |
+照护工作台提供患者、最近护理记录和待办任务的聚合视图。后端提供独立接口：
 
-照护工作台是患者、记录、任务的聚合入口，提供：
+```text
+GET /api/care/workbench
+```
 
-1. 患者数量、记录数量、待办任务、逾期任务统计。
-2. 患者列表。
-3. 最近护理记录。
-4. 即将到来的任务。
-5. 搜索患者、记录或任务。
-6. 直接完成任务。
+该接口按用户使用 Redis 短缓存，key 为：
 
-该接口使用 Redis 短缓存，缓存 key 为 `cache:care:workbench:{userId}`，TTL 为 30 秒。患者、记录、任务发生写操作后会删除对应用户的工作台缓存。
+```text
+cache:care:workbench:{userId}
+```
+
+TTL 为 30 秒。患者、护理记录、任务写入后会清理工作台缓存。
 
 ### 4.7 健康趋势模块
 
-涉及路径：
+前端路径：`client/src/features/trends`、`client/src/app/pages/HealthTrendPage.tsx`。  
+后端路径：`server/app/api/routes/trends.py`、`trend_service.py`。
 
-| 前端 | 后端 |
+趋势模块基于 `care_metrics` 时间序列数据，支持：
+
+1. 按患者查询指定指标。
+2. 支持 `startAt`、`endAt` 时间范围。
+3. 支持近 7 天、近 30 天、自定义范围。
+4. 支持血压双线、血糖、体温、心率等指标。
+5. 支持趋势分析输出。
+
+趋势分析输出包括：
+
+| 字段 | 说明 |
 | --- | --- |
-| `client/src/features/trends`、`client/src/app/pages/HealthTrendPage.tsx` | `server/app/api/routes/trends.py`、`server/app/services/trend_service.py` |
+| `summary` | 趋势摘要 |
+| `riskLevel` | 风险等级 |
+| `highlights` | 关键观察点 |
+| `suggestions` | 护理建议 |
+| `riskNote` | 风险提示 |
+| `generatedBy` | 生成来源，如 DeepSeek 或 fallback |
 
-功能包括：
-
-1. 按患者查看健康指标趋势。
-2. 支持最近 7 天、最近 30 天、自定义时间范围。
-3. 支持血压双线图、血糖、体温、心率等指标。
-4. 返回统计摘要，如平均值、最大值、最小值、数据点数量。
-5. 提供 AI 趋势分析。
-
-趋势数据使用 Redis 缓存，趋势分析结果也使用 Redis 缓存。缓存 key 包含用户、患者、时间范围、指标类型和数据摘要。当患者新增或修改护理记录后，相关趋势缓存会失效，保证分析不会长期使用旧数据。
+趋势分析采用 DeepSeek 结构化分析与规则 fallback 双路径。该能力只用于护理辅助观察，不构成医学诊断。
 
 ### 4.8 AI 护理助手模块
 
-涉及路径：
+前端路径：`client/src/features/ai`、`client/src/app/pages/AIAssistantPage.tsx`、`AIConfirmPage.tsx`。  
+后端路径：`server/app/api/routes/ai.py`、`ai_service.py`、`deepseek_service.py`、`prompt_service.py`、`rag_service.py`。
 
-| 前端 | 后端 |
+支持意图：
+
+| intent | 说明 |
 | --- | --- |
-| `client/src/app/pages/AIAssistantPage.tsx`、`client/src/features/ai` | `server/app/api/routes/ai.py`、`server/app/services/ai_service.py` |
+| `qa` | 护理问答 |
+| `care_record` | 护理记录草稿 |
+| `care_task` | 护理任务草稿 |
+| `form_prefill` | 预留意图，当前不作为独立持久化对象 |
 
-AI 助手支持三类意图：
-
-| 意图 | 说明 |
-| --- | --- |
-| `qa` | 护理问题问答 |
-| `care_record` | 生成护理记录草稿 |
-| `care_task` | 生成护理任务草稿 |
-
-流程设计：
+AI 工作流：
 
 ```mermaid
 sequenceDiagram
-    participant C as 客户端
-    participant A as AI API
+    participant C as 前端
+    participant API as AI API
     participant R as Redis
     participant P as Prompt 模板
-    participant K as 知识库 RAG
+    participant K as 知识检索
     participant D as DeepSeek
     participant DB as PostgreSQL
-
-    C->>A: 发送护理问题或任务描述
-    A->>R: 检查用户 AI 调用限流
-    A->>P: 读取启用 Prompt 模板
-    A->>K: 检索相关知识文章
-    A->>D: 调用 DeepSeek 生成回复
-    D-->>A: 返回结构化结果
-    A->>DB: 写入 ai_assistant_logs
-    A-->>C: 返回答案或草稿
+    C->>API: 输入护理问题或记录/任务描述
+    API->>R: 检查 AI 调用限流
+    API->>P: 读取启用 Prompt 模板
+    API->>K: 检索知识文章片段
+    API->>D: 调用 DeepSeek
+    D-->>API: 返回结构化 JSON
+    API->>API: Pydantic 校验输出结构
+    API->>DB: 写入 ai_assistant_logs
+    API-->>C: 返回答案或草稿
 ```
 
-当前 AI 设计的重点：
+AI 模块的重要边界：
 
-1. 前端不接触 DeepSeek key，所有真实模型调用都在服务端完成。
-2. 未配置 DeepSeek key 或模型调用失败时，服务端有规则 fallback，保证主流程可用。
-3. 护理记录和任务草稿不会直接入库，需要用户在 `/ai-confirm` 页面确认后保存。
-4. AI 问答支持流式接口 `/api/ai/assistant/stream`。
-5. 后端通过 RAG 从已发布知识文章中检索相关内容，作为回答参考。
-6. AI 调用记录写入 `ai_assistant_logs`，供后台查看。
+1. DeepSeek key 只在服务端读取，前端不接触真实 API key。
+2. DeepSeek 失败、未配置或返回结构不合规时自动 fallback。
+3. AI 输出必须经过 Pydantic Schema 校验。
+4. AI 草稿不直接写入业务表，而是进入确认页，由用户确认后再调用护理记录或任务接口保存。
+5. AI stream 接口是后端将最终回答切分为 SSE 输出，不是 DeepSeek 原生 token 流式透传。
+6. RAG 是基于知识文章的关键词检索增强，不是向量数据库或 embedding 检索。
 
 ### 4.9 知识学习模块
 
-涉及路径：
-
-| 前端 | 后端 |
-| --- | --- |
-| `client/src/features/knowledge` | `server/app/api/routes/knowledge.py`、`server/app/services/knowledge_service.py` |
+前端路径：`client/src/features/knowledge`。  
+后端路径：`server/app/api/routes/knowledge.py`、`knowledge_service.py`。
 
 功能包括：
 
-1. 知识分类列表。
-2. 文章和视频内容列表。
-3. 标题/摘要搜索。
-4. 分类筛选。
-5. 文章详情。
-6. 视频播放。
-7. 浏览量记录。
-8. 点赞和取消点赞。
-9. 收藏和取消收藏。
-10. 相关文章推荐。
+1. 知识分类。
+2. 文章/视频内容列表。
+3. 搜索与分类筛选。
+4. 详情页。
+5. 浏览量记录。
+6. 点赞和取消点赞。
+7. 收藏和取消收藏。
+8. 相关推荐。
 
-前台仅展示 `published` 状态的知识内容，草稿和下架内容只在后台管理端可见。知识分类使用 Redis 缓存，key 为 `cache:knowledge:categories`，TTL 为 600 秒。后台创建或更新知识文章、改变文章状态时会清理相关缓存。
+知识文章状态：
+
+```text
+published / draft / archived
+```
+
+前台只展示 `published` 内容，后台可以管理草稿、发布和下架状态。视频知识支持配置 `videoUrl` 并由前端使用原生 video 标签播放；不要将其表述为完整视频课程平台。
 
 ### 4.10 社区交流模块
 
-涉及路径：
-
-| 前端 | 后端 |
-| --- | --- |
-| `client/src/features/community` | `server/app/api/routes/community.py`、`server/app/services/community_service.py` |
+前端路径：`client/src/features/community`。  
+后端路径：`server/app/api/routes/community.py`、`community_service.py`、`content_moderation_service.py`。
 
 功能包括：
 
-1. 创建帖子，默认进入 `pending` 待审核状态。
-2. 社区帖子列表，仅展示 `passed` 状态。
-3. 帖子详情。
-4. 创建评论，评论通过内容审核后直接显示。
-5. 点赞帖子。
-6. 收藏和取消收藏帖子。
-7. 举报帖子。
-8. 相关讨论和作者其他讨论推荐。
+1. 发帖。
+2. 帖子列表和详情。
+3. 评论。
+4. 点赞。
+5. 收藏和取消收藏。
+6. 举报。
+7. 相关推荐和作者其他帖子。
 
-社区状态枚举为：
+社区状态统一为：
 
-| 状态 | 说明 |
-| --- | --- |
-| `pending` | 待审核 |
-| `passed` | 已通过 |
-| `rejected` | 已拒绝 |
+```text
+pending / passed / rejected
+```
 
-评论审核不再依赖后台人工审核，而是在后端调用内容审核服务。服务会先使用本地敏感词兜底，再根据配置调用 Apizero 内容审核 API。审核失败时，客户端收到友好提示，如“内容包含敏感信息，请修改后再发布。”。
+帖子创建后默认进入 `pending`，需要后台审核。评论会经过内容审核服务，审核通过后进入 `passed`。内容审核包含本地敏感词拦截，并在配置 API key 时调用外部内容审核服务。
+
+当前未确认实现的高级社交功能包括：关注作者、评论回复、评论点赞、取消点赞。这些应写为后续扩展，而不是已实现功能。
 
 ### 4.11 个人中心模块
 
-涉及路径：
-
-| 前端 | 后端 |
-| --- | --- |
-| `client/src/features/profile` | `server/app/api/routes/users.py`、`server/app/services/user_service.py` |
+前端路径：`client/src/features/profile`。  
+后端路径：`server/app/api/routes/users.py`、`user_service.py`。
 
 功能包括：
 
-1. 查看与编辑个人信息。
-2. 上传头像。
-3. 查看个人统计。
-4. 通知提醒设置。
-5. 应用偏好设置，如主题和语言。
+1. 当前用户资料。
+2. 资料编辑。
+3. 头像更新。
+4. 用户统计。
+5. 通知设置。
+6. 偏好设置。
+7. 关于、指南、隐私、条款等静态说明页。
 
-头像上传使用 base64 data URL 传给后端，后端校验文件类型和大小后写入 `server/uploads/avatars`，并通过 `/uploads` 静态路径访问。
+头像更新基于 `imageData`，后端处理后提供 `/uploads` 静态访问。论文表述可以写“头像更新”，不要写成 multipart 文件上传，除非后续代码明确改为 multipart。
 
-## 5. 后台管理功能设计
+---
 
-后台路由集中在 `/admin/*` 下。
+## 5. 后台管理模块设计
 
-### 5.1 管理员登录
+后台管理端位于 `admin/src/admin`，通过 `@admin` alias 接入前端构建。后台路由位于 `/admin/*`。
 
-管理员通过 `/api/admin/auth/login` 登录，后端使用独立的 `admin_users` 表。前端将管理员 token 保存到 `care-app-admin-token`，与普通用户 token 分离。
+### 5.1 管理员登录与鉴权
 
-### 5.2 Dashboard 统计
+后台管理员使用独立表 `admin_users`。前端使用独立 token key：
 
-接口：`GET /api/admin/dashboard/summary`
+```text
+care-app-admin-token
+```
 
-统计内容包括：
+`AdminLayout` 会检查 admin token，并调用 `/api/admin/me` 验证管理员身份。验证失败时清理 token 并跳转登录页。
 
-1. 用户数。
-2. 患者数。
-3. 护理记录数。
-4. 护理任务数。
-5. 待审核帖子数。
-6. 待审核评论数。
-7. 知识文章数。
-8. AI 日志数。
+### 5.2 Dashboard
 
-该接口使用 Redis 缓存，key 为 `cache:admin:dashboard_summary`，TTL 为 60 秒。用户创建、发帖、审核、知识变更、AI 日志创建等操作会触发缓存清理或由短 TTL 兜底。
+后台 Dashboard 显示用户、患者、记录、任务、知识文章、待审核内容和 AI 日志等统计数据。该接口使用 Redis 缓存：
+
+```text
+cache:admin:dashboard_summary
+```
+
+TTL 为 60 秒。
 
 ### 5.3 用户管理
 
-接口包括：
+后台支持用户列表、关键词搜索和启用/禁用用户。用户状态为：
 
-1. `GET /api/admin/users`
-2. `PUT /api/admin/users/{userId}/status`
+```text
+active / disabled
+```
 
-后台可查看用户列表、搜索用户，并切换用户状态。普通用户状态为 `active` 或 `disabled`。
+当前前端用户状态筛选主要在本地完成，不应表述为复杂后端多条件用户管理系统。
 
 ### 5.4 社区审核
 
-接口包括：
-
-1. `GET /api/admin/reviews/posts`
-2. `PUT /api/admin/reviews/posts/{postId}`
-
-管理员可以查看不同状态的社区帖子，并将帖子审核为通过或拒绝。当前后台审核重点是帖子，评论由内容审核 API 自动处理。
+后台当前主要确认的是社区帖子审核，包括查看待审核、已通过、已拒绝帖子，并支持通过或拒绝。评论数据本身有状态字段，但后台评论审核页面/接口需要以最终路由为准，不应在论文中过度夸大。
 
 ### 5.5 知识内容管理
 
-接口包括：
+后台支持知识文章列表、创建、编辑、发布、下架。文章类型包括：
 
-1. `GET /api/admin/knowledge/articles`
-2. `POST /api/admin/knowledge/articles`
-3. `PUT /api/admin/knowledge/articles/{articleId}`
-4. `PUT /api/admin/knowledge/articles/{articleId}/status`
-5. `GET /api/admin/knowledge/categories`
+```text
+article / video
+```
 
-后台可创建和编辑知识文章，支持文章和视频两种类型，可配置标题、摘要、正文、作者、来源、阅读时间、封面色、视频链接和状态。状态包括 `published`、`draft`、`archived`。
+状态包括：
+
+```text
+published / draft / archived
+```
+
+当前是基础内容管理能力，不包含复杂富文本编辑器、图片资源管理或批量内容发布。
 
 ### 5.6 Prompt 模板管理
 
-接口包括：
+Prompt 模板存储于 `prompt_templates` 表。后台可读取和保存 Prompt 模板。后端 AI 服务和趋势分析服务会读取启用模板，因此 Prompt 管理不是单纯页面预留。
 
-1. `GET /api/admin/prompts`
-2. `PUT /api/admin/prompts/{promptId}`
-
-Prompt 模板保存于 `prompt_templates` 表，后台可编辑模板名称、说明、内容和启停状态。后端 AI 服务会读取启用模板，用于 AI 助手和趋势分析。当前默认模板覆盖：
+默认 Prompt key 包括：
 
 | key | 用途 |
 | --- | --- |
@@ -463,187 +497,26 @@ Prompt 模板保存于 `prompt_templates` 表，后台可编辑模板名称、�
 
 ### 5.7 AI 日志
 
-接口包括：
+AI 调用写入 `ai_assistant_logs` 表。后台可查看用户输入、识别意图、AI 回复、草稿 payload、引用来源和风险提示。该模块可作为 AI 可审计性的实现依据。
 
-1. `GET /api/admin/ai-logs`
-2. `GET /api/admin/ai-logs/{logId}`
+---
 
-后台可查看真实 AI 调用日志，包括用户、原始消息、意图、回答、草稿 payload、引用来源、风险提示和创建时间。
+## 6. 数据库设计
 
-## 6. 后端核心设计
+### 6.1 数据库总体结构
 
-### 6.1 配置管理
+当前 ORM 层包含以下主要表：
 
-配置集中在 `server/app/core/config.py`，使用 `pydantic-settings` 从 `.env` 读取。主要配置包括：
-
-| 类型 | 变量 |
+| 类型 | 表 |
 | --- | --- |
-| 数据库 | `DATABASE_URL` |
-| Redis | `REDIS_URL`、`REDIS_ENABLED`、`EMAIL_CODE_TTL_SECONDS` |
-| JWT | `JWT_SECRET_KEY` |
-| 邮件 | `EMAIL_PROVIDER`、`SMTP_HOST`、`SMTP_PORT`、`SMTP_USERNAME`、`SMTP_PASSWORD`、`EMAIL_DEBUG_CODE` |
-| AI | `AI_PROVIDER`、`AI_USE_REAL_MODEL`、`DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL` |
-| 内容审核 | `CONTENT_MODERATION_ENABLED`、`CONTENT_MODERATION_BASE_URL`、`CONTENT_MODERATION_API_KEY` |
-| CORS | `CORS_ORIGINS`、`CORS_ORIGIN_REGEX` |
+| 用户认证 | `users`、`email_verification_codes`、`admin_users` |
+| 用户设置 | `user_notification_settings`、`user_preferences` |
+| 患者护理 | `patients`、`care_records`、`care_metrics`、`care_tasks` |
+| 知识学习 | `knowledge_categories`、`knowledge_articles`、`user_knowledge_likes`、`user_knowledge_bookmarks` |
+| 社区交流 | `community_posts`、`community_comments`、`community_post_likes`、`community_post_bookmarks`、`community_post_reports` |
+| AI 运维 | `ai_assistant_logs`、`prompt_templates` |
 
-敏感字段如 `SMTP_PASSWORD` 和 `DEEPSEEK_API_KEY` 使用 `SecretStr` 表示，避免日志或错误信息泄露。
-
-### 6.2 认证与授权
-
-普通用户认证：
-
-1. 用户登录成功后后端签发 access token 和 refresh token。
-2. 前端请求通过 `Authorization: Bearer <token>` 传递。
-3. 后端依赖从 token 中解析用户并校验用户状态。
-
-管理员认证：
-
-1. 管理员使用独立 `admin_users` 表。
-2. 管理员 token 与普通用户 token 存储键不同。
-3. 后台接口依赖管理员认证。
-
-密码使用 `passlib[bcrypt]` 进行哈希存储，不保存明文密码。
-
-### 6.3 邮箱验证码与 QQ SMTP
-
-邮件服务位于 `server/app/services/email_service.py`，提供：
-
-```python
-send_verification_code_email(to_email: str, code: str) -> None
-```
-
-支持两种模式：
-
-| 模式 | 说明 |
-| --- | --- |
-| `EMAIL_PROVIDER=console` | 本地开发模式，输出或返回 debugCode，不依赖真实邮箱 |
-| `EMAIL_PROVIDER=smtp` | 真实 SMTP 发送，支持 QQ 邮箱 SMTP_SSL 465 和 STARTTLS |
-
-邮件标题为“Caregiver 护理助手邮箱验证码”，正文包含验证码、有效期和安全提示。SMTP 失败时后端返回友好错误，不向前端暴露授权码、服务器异常或原始栈信息。
-
-### 6.4 Redis 设计
-
-Redis 封装位于 `server/app/core/redis.py`。该模块的设计原则是“可用时增强，不可用时不打断主业务”。Redis 连接或命令异常时，函数安全返回 `None`、`False` 或 `0`，主业务继续走数据库。
-
-Redis helper 包括：
-
-| 函数 | 用途 |
-| --- | --- |
-| `redis_get`、`redis_setex`、`redis_delete` | 基础字符串缓存 |
-| `redis_incr`、`redis_expire`、`redis_ttl`、`redis_get_int` | 限流计数 |
-| `redis_set_json`、`redis_get_json` | JSON 聚合缓存 |
-| `redis_delete_pattern` | 按模式清理缓存 |
-| `redis_is_available` | 健康检查 |
-
-Redis 使用场景：
-
-| 场景 | key 示例 | TTL |
-| --- | --- | --- |
-| 邮箱验证码缓存 | `email_code:{email}` | 600 秒 |
-| 验证码发送冷却 | `email_code_cooldown:{email}` | 60 秒 |
-| 验证码错误锁定 | `email_code_lock:{email}` | 600 秒 |
-| 登录失败锁定 | `login_lock:{email}` | 600 秒 |
-| AI 分钟限流 | `rate:ai:user:{userId}:minute` | 60 秒 |
-| AI 日限流 | `rate:ai:user:{userId}:day` | 当日剩余时间 |
-| 管理后台统计缓存 | `cache:admin:dashboard_summary` | 60 秒 |
-| 照护工作台缓存 | `cache:care:workbench:{userId}` | 30 秒 |
-| 知识分类缓存 | `cache:knowledge:categories` | 600 秒 |
-| 趋势数据缓存 | `cache:trend:data:*` | 约 10 分钟 |
-| AI 趋势分析缓存 | `cache:trend:analysis:*` | 约 24 小时 |
-
-### 6.5 限流设计
-
-系统通过 Redis 实现多个业务限流：
-
-| 接口 | 限流规则 |
-| --- | --- |
-| `POST /api/auth/email/send-code` | 同一邮箱 60 秒一次；同一 IP 每分钟最多 10 次 |
-| 注册验证码校验 | 同一邮箱验证码错误最多 5 次，超过锁定 10 分钟 |
-| `POST /api/auth/login` | 同一邮箱连续密码错误 5 次锁定 10 分钟；同一 IP 每分钟最多 20 次 |
-| `POST /api/ai/assistant` | 单用户每分钟最多 10 次；每天最多 200 次 |
-
-限流触发时返回友好错误，如“验证码发送过于频繁，请稍后再试。”、“AI 调用过于频繁，请稍后再试。”。
-
-### 6.6 缓存失效设计
-
-缓存失效由 `server/app/services/cache_service.py` 集中封装。
-
-| 缓存 | 失效触发 |
-| --- | --- |
-| 照护工作台缓存 | 创建/更新患者、创建/更新护理记录、创建/更新/完成任务 |
-| 知识分类缓存 | 创建/更新知识文章、修改知识文章状态、分类变更 |
-| 管理后台统计缓存 | 创建用户、发帖、审核帖子、创建知识文章、修改文章状态、创建 AI 日志等 |
-| 趋势缓存 | 创建或更新护理记录后，按用户和患者清理趋势数据与 AI 分析缓存 |
-
-## 7. AI 与 RAG 设计
-
-### 7.1 DeepSeek 接入
-
-DeepSeek 接入位于 `server/app/services/deepseek_service.py`。服务端通过环境变量读取 DeepSeek 配置，前端完全不接触 API Key。
-
-AI 调用流程包含：
-
-1. 用户发送消息。
-2. 后端识别意图。
-3. 读取 Prompt 模板。
-4. 对护理知识库进行关键词检索。
-5. 组合系统提示、用户消息、知识上下文。
-6. 调用 DeepSeek。
-7. 校验结构化 JSON 输出。
-8. 返回问答结果或草稿。
-9. 写入 AI 日志。
-
-### 7.2 RAG 检索
-
-RAG 位于 `server/app/services/rag_service.py`。当前实现为轻量关键词检索：
-
-1. 从已发布知识文章中读取标题、摘要、正文。
-2. 根据用户问题关键词进行简单打分。
-3. 选取相关知识内容作为上下文。
-4. 返回来源标题给 AI 服务和前端。
-
-这种方案优点是实现成本低、可解释、适合毕业设计阶段演示。后续可升级为向量化检索，例如使用 embedding 模型和 pgvector。
-
-### 7.3 AI 安全边界
-
-系统通过以下方式降低 AI 风险：
-
-1. 不让 AI 直接写入护理记录或任务，必须由用户确认。
-2. Prompt 中约束 AI 只提供护理参考，不替代医疗诊断。
-3. RAG 仅检索已发布的知识文章。
-4. 模型失败时使用规则 fallback。
-5. AI 调用日志可在后台审计。
-6. Redis 限流避免单用户过度调用。
-
-## 8. 内容审核设计
-
-内容审核位于 `server/app/services/content_moderation_service.py`，主要用于社区评论。
-
-审核策略：
-
-1. 先进行本地敏感词兜底判断。
-2. 如果启用第三方内容审核，则调用 Apizero 接口。
-3. API Key 存储在 `.env` 的 `CONTENT_MODERATION_API_KEY` 中。
-4. 审核通过后评论状态为 `passed`。
-5. 审核失败时不入库展示，并向客户端返回友好错误。
-
-该设计避免所有评论都进入后台人工审核，降低管理成本，同时保留帖子审核作为社区质量控制手段。
-
-## 9. 数据库设计
-
-### 9.1 数据库总体设计
-
-数据库使用 PostgreSQL，ORM 使用 SQLAlchemy 2.0，迁移工具使用 Alembic。当前迁移版本包括：
-
-| 迁移 | 说明 |
-| --- | --- |
-| `20260513_0001_initial_schema.py` | 用户、验证码、患者、护理记录、护理指标、任务、AI 日志、设置 |
-| `20260513_0002_knowledge_module.py` | 知识分类、知识文章、点赞、收藏 |
-| `20260513_0003_community_admin_care.py` | 社区、管理员、用户状态 |
-| `20260514_0004_prompt_templates_and_video_url.py` | Prompt 模板和知识视频链接 |
-| `20260514_0005_user_avatar_url.py` | 用户头像 URL |
-
-### 9.2 主要实体关系
+### 6.2 核心 ER 关系
 
 ```mermaid
 erDiagram
@@ -652,300 +525,321 @@ erDiagram
     care_records ||--o{ care_metrics : contains
     patients ||--o{ care_tasks : has
     users ||--o{ ai_assistant_logs : creates
-    users ||--|| user_notification_settings : has
-    users ||--|| user_preferences : has
-    knowledge_categories ||--o{ knowledge_articles : contains
-    users ||--o{ user_knowledge_likes : likes
-    users ||--o{ user_knowledge_bookmarks : bookmarks
-    users ||--o{ community_posts : writes
+    users ||--o{ community_posts : publishes
     community_posts ||--o{ community_comments : has
-    users ||--o{ community_post_likes : likes
-    users ||--o{ community_post_bookmarks : bookmarks
-    users ||--o{ community_post_reports : reports
+    knowledge_categories ||--o{ knowledge_articles : contains
 ```
 
-### 9.3 用户与认证相关表
+### 6.3 患者表
 
-| 表 | 说明 |
+`patients` 表只保存患者基础档案：
+
+| 字段 | 说明 |
 | --- | --- |
-| `users` | 普通用户，包含 username、email、password_hash、avatar_url、status |
-| `admin_users` | 后台管理员账号 |
-| `email_verification_codes` | 邮箱验证码历史，支持 DB fallback |
-| `user_notification_settings` | 用户通知设置 |
-| `user_preferences` | 用户偏好设置 |
+| `id` | 主键 |
+| `user_id` | 所属用户 |
+| `name` | 姓名 |
+| `age` | 年龄 |
+| `gender` | 性别 |
+| `profile_note` | 护理说明 |
+| `created_at`、`updated_at` | 创建和更新时间 |
 
-设计要点：
+不将电话、地址、病史、紧急联系人等复杂字段直接扩展进患者表，这是为了保持 MVP 数据模型稳定。
 
-1. 用户邮箱唯一。
-2. 密码只存哈希。
-3. 普通用户与管理员分表。
-4. 用户设置与偏好使用一对一表，便于后续扩展。
+### 6.4 护理记录与指标表
 
-### 9.4 患者与护理数据表
+`care_records` 保存护理事件，`care_metrics` 保存该事件下的指标。
 
-| 表 | 说明 |
+`care_metrics` 同时支持：
+
+| 字段 | 说明 |
 | --- | --- |
-| `patients` | 患者基本信息 |
-| `care_records` | 护理记录主表 |
-| `care_metrics` | 护理指标明细表 |
-| `care_tasks` | 护理任务表 |
+| `value_numeric` | 数值型指标，如血压、血糖、体温、心率 |
+| `value_text` | 文本型指标，如用药名称、饮食描述、观察文本 |
+| `unit` | 单位 |
 
-设计要点：
+该设计使不同记录类型可以复用同一套结构，同时支持趋势统计。
 
-1. 患者属于某个用户，删除用户会级联删除患者。
-2. 护理记录属于患者，删除患者会级联删除记录。
-3. 指标明细属于护理记录，删除记录会级联删除指标。
-4. 记录类型使用 check constraint 限制合法值。
-5. 护理指标支持数值和文本两种值，兼顾趋势计算与描述性记录。
+### 6.5 护理任务表
 
-`care_record + care_metric` 设计示例：
+`care_tasks` 保存与患者绑定的任务。核心枚举包括：
 
-| care_records 字段 | 示例 |
+| 字段 | 可选值 |
 | --- | --- |
-| `record_type` | `blood_pressure` |
-| `occurred_at` | `2026-05-15T08:30:00+08:00` |
-| `source` | `manual` 或 `ai` |
+| `task_type` | `blood_pressure`、`blood_sugar`、`medication`、`diet`、`rehab`、`appointment`、`nutrition`、`other` |
+| `repeat_rule` | `once`、`daily`、`weekly`、`monthly` |
+| `priority` | `low`、`normal`、`high` |
+| `status` | `pending`、`completed`、`scheduled` |
 
-| care_metrics 字段 | 示例 |
-| --- | --- |
-| `metric_key` | `bloodPressureSystolic` |
-| `value_numeric` | `130` |
-| `unit` | `mmHg` |
+### 6.6 知识与社区表
 
-| care_metrics 字段 | 示例 |
-| --- | --- |
-| `metric_key` | `bloodPressureDiastolic` |
-| `value_numeric` | `85` |
-| `unit` | `mmHg` |
+知识模块包括分类、文章、点赞和收藏。社区模块包括帖子、评论、点赞、收藏和举报。社区内容审核状态统一为：
 
-该结构对论文写作有较强说明价值，因为它体现了“记录主体”和“可扩展指标”分离的数据库设计思想。
-
-### 9.5 知识模块表
-
-| 表 | 说明 |
-| --- | --- |
-| `knowledge_categories` | 知识分类 |
-| `knowledge_articles` | 知识文章或视频 |
-| `user_knowledge_likes` | 用户点赞 |
-| `user_knowledge_bookmarks` | 用户收藏 |
-
-设计要点：
-
-1. 文章属于分类。
-2. 文章支持 `article` 和 `video` 两种类型。
-3. 文章状态为 `published`、`draft`、`archived`。
-4. 点赞和收藏使用用户与文章的唯一约束，避免重复操作。
-
-### 9.6 社区模块表
-
-| 表 | 说明 |
-| --- | --- |
-| `community_posts` | 社区帖子 |
-| `community_comments` | 社区评论 |
-| `community_post_likes` | 帖子点赞 |
-| `community_post_bookmarks` | 帖子收藏 |
-| `community_post_reports` | 帖子举报 |
-
-设计要点：
-
-1. 帖子和评论状态限制为 `pending`、`passed`、`rejected`。
-2. 前台只展示通过审核的帖子和评论。
-3. 点赞、收藏使用唯一约束防止重复。
-4. 举报记录保留原因和用户，便于后台后续扩展。
-
-### 9.7 AI 与 Prompt 表
-
-| 表 | 说明 |
-| --- | --- |
-| `ai_assistant_logs` | AI 助手调用日志 |
-| `prompt_templates` | 可后台管理的 Prompt 模板 |
-
-`ai_assistant_logs` 使用 JSONB 存储草稿 payload 和引用来源，适合保存不完全固定的 AI 输出结构。
-
-## 10. API 设计
-
-服务端 API 使用 `/api` 前缀。主要 API 模块包括：
-
-| 模块 | 路径前缀 | 说明 |
-| --- | --- | --- |
-| Auth | `/api/auth` | 登录、注册、验证码、找回密码 |
-| Users | `/api/users` | 当前用户、头像、设置、偏好 |
-| Home | `/api/home` | 首页聚合 |
-| Care | `/api/care` | 照护工作台 |
-| Patients | `/api/patients` | 患者 CRUD 和患者看板 |
-| Records | `/api/care-records` | 护理记录 CRUD |
-| Tasks | `/api/tasks` | 护理任务 CRUD 和完成 |
-| Trends | `/api/trends` | 健康趋势和 AI 分析 |
-| AI | `/api/ai` | AI 助手普通与流式接口 |
-| Knowledge | `/api/knowledge` | 知识分类、文章、点赞收藏 |
-| Community | `/api/community` | 社区帖子、评论、点赞收藏举报 |
-| Admin | `/api/admin` | 后台管理 |
-
-API 统一响应结构是本项目的重要工程约束，便于前端统一处理成功、错误和 message。
-
-## 11. 测试数据与演示设计
-
-当前 `server/scripts/reset_demo_data.py` 用于重置并生成演示数据。它会清理业务表和 Redis 状态，然后重新创建：
-
-| 数据 | 数量或说明 |
-| --- | --- |
-| 普通用户 | 6 个 |
-| 管理员 | 2 个 |
-| 患者 | 24 个 |
-| 护理记录 | 约 1800 条 |
-| 护理任务 | 约 120 条 |
-| 知识文章 | 48 条 |
-| 社区帖子 | 80 条 |
-| AI 日志 | 90 条 |
-
-演示账号：
-
-| 类型 | 邮箱 | 密码 |
-| --- | --- | --- |
-| 客户端用户 | `caregiver@example.com` | `password123` |
-| 后台管理员 | `admin@example.com` | `admin123` |
-
-脚本还会清理 Redis 中的验证码、限流和缓存 key，确保演示环境干净。
-
-## 12. 部署与运行设计
-
-本地基础设施通过 `docker-compose.yml` 启动：
-
-| 服务 | 容器名 | 端口 | 网络 |
-| --- | --- | --- | --- |
-| PostgreSQL | `caregiver_postgres` | `5432` | `caregiver` |
-| Redis | `caregiver_redis` | `6379` | `caregiver` |
-
-后端默认运行在 `8000` 端口，前端 Vite 默认运行在 `5173`。CORS 配置支持 localhost、127.0.0.1 以及常见局域网 IP 网段，便于手机在同一局域网访问。
-
-典型启动流程：
-
-```bash
-docker compose up -d
-
-cd server
-python -m alembic upgrade head
-python scripts/reset_demo_data.py
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-
-cd ../client
-pnpm dev --host 0.0.0.0
+```text
+pending / passed / rejected
 ```
 
-健康检查接口：
+### 6.7 AI 日志与 Prompt 表
 
-```http
-GET /health
+`ai_assistant_logs` 使用 JSONB 保存：
+
+- `draft_payload`
+- `sources`
+
+这使 AI 草稿和引用来源可以灵活存储，并供后台审计。
+
+`prompt_templates` 用于后台维护 Prompt 模板，状态为：
+
+```text
+active / disabled
 ```
 
-返回示例：
+### 6.8 Schema 设计
+
+后端 Pydantic Schema 使用 `CamelModel` 将 snake_case 自动转换为 camelCase。分页返回格式统一为：
 
 ```json
 {
-  "success": true,
-  "data": {
-    "status": "ok",
-    "redis": "ok"
-  }
+  "items": [],
+  "page": 1,
+  "pageSize": 20,
+  "total": 0
 }
 ```
 
-当 Redis 不可用时，`redis` 字段为 `unavailable`，验证码、登录、AI 等主流程仍尽量继续依赖数据库或规则 fallback，不直接崩溃。
+### 6.9 迁移注意事项
 
-## 13. 安全与可靠性设计
+当前 ORM 模型已经覆盖 Admin、Community、Prompt、头像、视频等完整数据结构。但代码审计中成功读取到的 Alembic 迁移主要包括初始表和知识模块迁移。正式交付前应再次验证全新数据库执行：
 
-系统当前具备以下安全与可靠性设计：
+```powershell
+alembic upgrade head
+python scripts/seed.py
+python scripts/api_smoke_test.py
+```
 
-1. 密码使用 bcrypt 哈希存储。
-2. 用户端和后台端 token 分离。
-3. 前端不暴露 DeepSeek key、SMTP 授权码和内容审核 API Key。
-4. `.env.example` 只提供占位配置，真实 `.env` 不应提交。
-5. 邮箱验证码有数据库历史记录和 Redis 缓存。
-6. 验证码、登录和 AI 调用均有限流。
-7. Redis 不可用时业务安全降级。
-8. 社区评论接入内容审核。
-9. AI 输出草稿必须经用户确认后入库。
-10. 后台可查看 AI 日志和 Prompt 模板。
-11. 数据库使用外键、唯一约束和 check constraint 保证基础数据合法性。
+若全新数据库不能创建 Admin、Community、Prompt 等表，需要补充迁移文件。论文可基于 ORM 说明数据库设计，但部署说明应以最终迁移链验证结果为准。
 
-## 14. 论文可写的设计亮点
+---
 
-### 14.1 双层护理记录模型
+## 7. AI 辅助与安全确认机制
 
-护理记录主表与护理指标明细表分离，使系统能够支持不同类型护理记录，同时保留趋势分析能力。该设计比直接将指标拼接成字符串更适合后续统计、筛选和 AI 分析。
+### 7.1 AI 输出结构
 
-### 14.2 Redis 增强但不强依赖
+AI 响应包含：
 
-系统将 Redis 用于验证码缓存、限流和短缓存，但服务层对 Redis 异常进行安全处理。当 Redis 不可用时，主业务不直接崩溃，体现了可用性设计。
-
-### 14.3 AI 草稿确认机制
-
-AI 不直接修改患者数据，而是生成草稿交由用户确认。这一机制兼顾智能化体验和医疗护理场景下的数据安全。
-
-### 14.4 RAG 与知识库结合
-
-AI 助手并非只依赖大模型通用知识，而是从系统内已发布知识文章检索上下文，提高回答与项目知识库的一致性。
-
-### 14.5 前后台分离的运营闭环
-
-前台负责照护记录和内容消费，后台负责知识内容、社区审核、Prompt 和 AI 日志管理，形成从数据采集、知识沉淀到运营管理的闭环。
-
-### 14.6 统一响应与统一 API 客户端
-
-后端统一返回 `{ success, data, message }`，前端统一使用 `apiClient`，降低各页面重复处理 API 的复杂度。
-
-## 15. 当前实现边界与后续优化方向
-
-当前系统已经具备完整的毕业设计演示能力，但仍可在论文“展望”中写入以下优化方向：
-
-1. 将当前关键词 RAG 升级为向量检索，例如 PostgreSQL + pgvector。
-2. 增加更细粒度的角色权限控制，如内容管理员、超级管理员、护理机构管理员。
-3. 增加真实消息推送或定时任务调度，用于任务提醒和健康异常提醒。
-4. 将头像与上传文件迁移到对象存储，增强生产环境可扩展性。
-5. 增加审计日志，记录管理员操作和敏感数据变更。
-6. 为 AI 趋势分析增加可解释图表和引用记录。
-7. 完善单元测试、集成测试和端到端测试。
-8. 对社区帖子也接入自动内容审核，进一步减少人工审核成本。
-9. 增加 HTTPS 部署，提升语音输入、摄像头上传等浏览器能力的可用性。
-
-## 16. 论文结构参考
-
-可以将论文正文组织为：
-
-1. 绪论：研究背景、家庭照护痛点、系统目标。
-2. 需求分析：用户角色、功能需求、非功能需求。
-3. 系统总体设计：前后端分离架构、技术选型、模块划分。
-4. 数据库设计：ER 图、核心表、护理记录双层模型、约束设计。
-5. 系统详细设计与实现：认证、患者、记录、任务、趋势、AI、知识、社区、后台。
-6. 系统测试：环境搭建、测试数据、功能测试、接口测试、异常测试。
-7. 总结与展望：完成情况、创新点、不足与后续优化。
-
-## 17. 关键源码索引
-
-| 内容 | 关键路径 |
+| 字段 | 说明 |
 | --- | --- |
-| 前端路由 | `client/src/app/routes.tsx` |
-| 前端 API 客户端 | `client/src/shared/lib/apiClient.ts` |
-| 前端认证存储 | `client/src/shared/lib/auth.ts` |
-| AI 助手页面 | `client/src/app/pages/AIAssistantPage.tsx` |
-| AI 草稿确认 | `client/src/app/pages/AIConfirmPage.tsx` |
-| 健康趋势页面 | `client/src/app/pages/HealthTrendPage.tsx` |
-| 后台 API 服务 | `admin/src/admin/services/admin.service.ts` |
-| FastAPI 入口 | `server/app/main.py` |
-| 配置管理 | `server/app/core/config.py` |
-| Redis 封装 | `server/app/core/redis.py` |
-| 认证服务 | `server/app/services/auth_service.py` |
-| 邮件服务 | `server/app/services/email_service.py` |
-| 患者服务 | `server/app/services/patient_service.py` |
-| 护理记录服务 | `server/app/services/record_service.py` |
-| 护理任务服务 | `server/app/services/task_service.py` |
-| 趋势服务 | `server/app/services/trend_service.py` |
-| AI 服务 | `server/app/services/ai_service.py` |
-| DeepSeek 服务 | `server/app/services/deepseek_service.py` |
-| RAG 服务 | `server/app/services/rag_service.py` |
-| 内容审核服务 | `server/app/services/content_moderation_service.py` |
-| 缓存失效 | `server/app/services/cache_service.py` |
-| 数据模型 | `server/app/models/` |
-| 数据库迁移 | `server/alembic/versions/` |
-| 演示数据 | `server/scripts/reset_demo_data.py` |
+| `conversationId` | 对话 ID |
+| `intent` | 意图 |
+| `answerText` | 文本回答 |
+| `draftType` | 草稿类型：record、task 或 null |
+| `draftPayload` | 结构化草稿 |
+| `sources` | 知识来源 |
+| `riskNote` | 风险提示 |
+| `generatedBy` | 生成来源 |
 
+### 7.2 结构化草稿校验
+
+DeepSeek 返回结果必须经过后端 Pydantic 模型校验：
+
+1. `care_record` 必须对应 `draftType=record`。
+2. `care_task` 必须对应 `draftType=task`。
+3. `qa` 不允许返回草稿。
+4. 血压必须拆分为收缩压和舒张压。
+5. 任务类型、重复规则、优先级受枚举约束。
+
+### 7.3 人工确认保存
+
+AI 草稿不会直接入库。前端将草稿暂存到 sessionStorage，并引导用户进入 `/ai-confirm`。用户确认后才调用护理记录或任务接口保存。
+
+这一机制可作为论文亮点：**AI 只辅助生成结构化草稿，最终保存权由用户确认，兼顾效率与安全性。**
+
+### 7.4 RAG 检索边界
+
+当前 RAG 是基于知识文章的关键词检索增强：抽取关键词、匹配 published 知识文章、截取片段、返回 sources。它不是向量数据库 RAG，不涉及 embedding 或向量召回。论文中应写“轻量级知识检索增强”。
+
+---
+
+## 8. Redis、SMTP 与缓存限流设计
+
+### 8.1 Redis 使用原则
+
+Redis 设计原则是：**可用时增强，不可用时不打断主业务**。Redis 异常时，验证码仍有数据库兜底，业务查询仍可访问 PostgreSQL，只是限流和缓存能力退化。
+
+### 8.2 认证安全相关 Redis key
+
+| 场景 | key | 说明 |
+| --- | --- | --- |
+| 验证码缓存 | `email_code:{email}` | 保存验证码 |
+| 发送冷却 | `email_code_cooldown:{email}` | 同邮箱 60 秒冷却 |
+| 验证码错误计数 | `email_code_fail:{email}` | 错误次数计数 |
+| 验证码锁定 | `email_code_lock:{email}` | 错误过多锁定 10 分钟 |
+| 发送 IP 限流 | `rate:send_code:ip:{ip}` | 同 IP 每分钟最多 10 次 |
+| 登录错误计数 | `login_fail:{email}` | 登录失败计数 |
+| 登录锁定 | `login_lock:{email}` | 登录失败过多锁定 10 分钟 |
+| 登录 IP 限流 | `rate:login:ip:{ip}` | 同 IP 每分钟最多 20 次 |
+
+### 8.3 AI 限流
+
+AI 接口通过 Redis 进行用户级限流：
+
+| 规则 | 说明 |
+| --- | --- |
+| 每分钟最多 10 次 | 防止短时间频繁调用模型 |
+| 每天最多 200 次 | 控制模型调用成本 |
+
+超限时返回 429，不调用 DeepSeek，也不写入 AI 日志。
+
+### 8.4 聚合缓存
+
+| 接口 | Redis key | TTL |
+| --- | --- | --- |
+| 后台 Dashboard | `cache:admin:dashboard_summary` | 60 秒 |
+| 照护工作台 | `cache:care:workbench:{userId}` | 30 秒 |
+| 知识分类 | `cache:knowledge:categories` | 600 秒 |
+| 趋势数据 | `cache:trend:data:*` | 约 10 分钟 |
+| 趋势分析 | `cache:trend:analysis:*` | 约 24 小时 |
+
+### 8.5 QQ SMTP
+
+邮件服务支持两种模式：
+
+| 模式 | 使用场景 |
+| --- | --- |
+| `console` | 本地开发和 smoke test，允许返回 debugCode |
+| `smtp` | 真实发送 QQ 邮箱验证码 |
+
+`SMTP_PASSWORD` 是 QQ 邮箱授权码，不是 QQ 登录密码。真实密钥只能放在 `server/.env`，不能提交到代码仓库。
+
+---
+
+## 9. 接口设计概览
+
+当前真实接口应以 FastAPI 路由和 `/openapi.json` 为准。仓库中的 `api.yaml` 是早期第一批非 AI API 草稿，已明显落后于当前代码。
+
+主要接口包括：
+
+| 模块 | 代表接口 |
+| --- | --- |
+| Auth | `/api/auth/email/send-code`、`/api/auth/register`、`/api/auth/login`、`/api/auth/password/reset` |
+| Users | `/api/users/me`、资料、头像、统计、通知设置、偏好设置 |
+| Home | `/api/home/summary` |
+| Patients | `/api/patients`、`/api/patients/{id}`、`/api/patients/{id}/dashboard` |
+| Records | `/api/care-records`、`/api/care-records/{id}` |
+| Tasks | `/api/tasks`、`/api/tasks/{id}`、`/api/tasks/{id}/complete` |
+| Trends | `/api/patients/{id}/metrics/trend`、`/api/patients/{id}/metrics/trend-analysis` |
+| AI | `/api/ai/assistant`、`/api/ai/assistant/stream` |
+| Knowledge | 分类、文章列表、详情、浏览、点赞、收藏、相关推荐 |
+| Community | 帖子、评论、点赞、收藏、举报、相关讨论、作者帖子 |
+| Admin | 登录、Dashboard、用户、审核、知识、Prompt、AI 日志 |
+| Care | `/api/care/workbench` |
+
+---
+
+## 10. 系统测试与运行环境
+
+### 10.1 运行环境
+
+本地开发环境通过 Docker Compose 管理 PostgreSQL 和 Redis：
+
+| 服务 | 镜像 | 端口 |
+| --- | --- | --- |
+| PostgreSQL | `postgres:16` | `5432:5432` |
+| Redis | `redis:7-alpine` | `6379:6379` |
+
+后端依赖包括 FastAPI、SQLAlchemy、Alembic、psycopg、python-jose、passlib、httpx、redis 等。前端使用 Vite + React + TypeScript。
+
+### 10.2 Seed 数据
+
+`server/scripts/seed.py` 提供演示数据：
+
+| 类型 | 数据 |
+| --- | --- |
+| 普通用户 | `caregiver@example.com / password123` |
+| 管理员 | `admin@example.com / admin123` |
+| 患者 | 张明、李芳 |
+| 护理数据 | 多条血压记录，包含收缩压和舒张压指标 |
+| 护理任务 | 每日测量血压任务 |
+| 知识分类 | 慢病管理、饮食护理、康复训练、常见症状处理 |
+| 知识文章 | 高血压、糖尿病、营养、压疮预防、康复训练、发热观察等 |
+| 社区数据 | 已通过帖子、待审核帖子、评论 |
+
+### 10.3 API Smoke Test
+
+`server/scripts/api_smoke_test.py` 使用 httpx 对真实后端进行接口级冒烟测试。覆盖范围包括：
+
+1. `/health` 与 Redis 状态。
+2. 邮箱验证码发送、注册、Redis 缓存和冷却。
+3. 普通用户登录和当前用户。
+4. 患者创建与查询。
+5. 护理记录创建与趋势查询。
+6. 护理任务创建、查询和完成。
+7. Knowledge 分类、列表、详情、浏览、点赞、收藏。
+8. Community 发帖、列表、详情、评论、点赞、收藏、举报。
+9. Care Workbench 聚合接口。
+10. AI QA、record draft、task draft。
+11. Admin 登录、Dashboard、用户列表、帖子审核、知识文章、AI 日志。
+
+该测试是接口级集成/冒烟测试，不等同于完整浏览器 E2E。它不覆盖页面样式、所有前端点击路径、真实 QQ SMTP 发信质量、DeepSeek 模型输出质量或压力测试。
+
+---
+
+## 11. 当前实现边界与谨慎表述
+
+为了论文表述准确，以下内容需要谨慎：
+
+1. `api.yaml` 是早期草稿，不是当前完整 API 契约。
+2. AI stream 是 SSE 流式展示，不是 DeepSeek 原生 token stream。
+3. RAG 是关键词检索增强，不是向量数据库 RAG。
+4. AI 趋势分析是护理参考，不构成医学诊断。
+5. AI 草稿使用 sessionStorage 临时保存，不是完整长期会话管理系统。
+6. logout 当前不是服务端 token blacklist 机制。
+7. 社区没有确认实现关注作者、评论回复、评论点赞、取消点赞等高级社交功能。
+8. 后台审核以社区帖子审核为主，评论审核是否完整应以最终 route 和页面为准。
+9. 知识视频支持 `videoUrl` 播放，但不是完整视频课程平台。
+10. 护理任务包含提醒字段，但未确认后台定时推送或消息队列。
+11. Alembic 迁移链需要在全新数据库上再次验证是否覆盖全部 ORM 模型。
+12. 前台以 feature 模块组织为主，但仍有部分页面位于 `client/src/app/pages`。
+
+---
+
+## 12. 论文写作章节映射
+
+| 论文章节 | 可引用内容 |
+| --- | --- |
+| 绪论 | 老龄化、慢病护理、照护者数据记录痛点、系统建设意义 |
+| 需求分析 | 用户角色、功能需求、非功能需求 |
+| 总体设计 | React + FastAPI + PostgreSQL + Redis 架构，前后台分离，模块划分 |
+| 数据库设计 | 用户、患者、护理记录、指标、任务、知识、社区、AI 日志、Prompt 表 |
+| 详细设计 | 认证、患者、记录、任务、趋势、AI、知识、社区、后台管理 |
+| 系统实现 | API client、JWT、Redis、SMTP、DeepSeek、fallback、RAG、Prompt、内容审核 |
+| 系统测试 | smoke test、接口测试、Seed 数据、Redis 验证、AI 草稿测试 |
+| 总结与展望 | 已完成能力、当前边界、移动端原生化、消息推送、向量 RAG、完整 E2E 测试等后续方向 |
+
+---
+
+## 13. 项目亮点总结
+
+1. **护理记录双层建模**：使用 `care_records` 保存护理事件，使用 `care_metrics` 保存结构化指标。
+2. **血压双指标存储**：收缩压与舒张压分开保存，支持趋势分析。
+3. **AI 草稿确认机制**：AI 只生成草稿，必须由用户确认后保存。
+4. **DeepSeek + fallback**：真实模型不可用时仍能保持核心 AI 功能可用。
+5. **Prompt 模板管理**：后台 Prompt 模板真实参与 AI 助手和趋势分析。
+6. **轻量级知识检索增强**：AI 回答可引用已发布知识文章片段。
+7. **Redis 工程增强**：验证码、限流、聚合缓存、趋势缓存均使用 Redis。
+8. **QQ SMTP / console 双模式**：兼顾本地测试和真实验证码发送。
+9. **后台 AI 日志审计**：AI 调用、意图、草稿、风险提示可被后台查看。
+10. **接口级 smoke test**：覆盖主业务链路，支持交付前快速验证。
+
+## 14. 后续优化方向
+
+1. 补齐并验证 Alembic 迁移链，确保全新数据库可完整创建所有表。
+2. 从 FastAPI `/openapi.json` 重新导出当前完整 OpenAPI 文档，替换过时 `api.yaml`。
+3. 为前端补充 Playwright E2E 测试，覆盖真实页面点击流程。
+4. 为护理记录补充独立详情/编辑页面。
+5. 引入定时任务或消息推送，实现真正提醒通知。
+6. 将 RAG 从关键词检索升级为 embedding + 向量数据库召回。
+7. 增加社区评论回复、评论点赞、作者关注等高级社交功能。
+8. 优化前端路由懒加载，降低构建包体积。
+9. 完善部署流程，增加 Dockerfile、生产环境配置和 CI 测试。
+10. 在保证安全边界的前提下，继续优化 AI 护理建议质量。
