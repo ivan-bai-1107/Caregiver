@@ -33,7 +33,6 @@ export function AdminUsersPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-2xl text-gray-900 mb-1" style={{ fontFamily: "var(--font-display)" }}>用户管理</h1>
-        <p className="text-gray-500">共 {total} 个注册用户，状态切换会写入数据库。</p>
       </div>
 
       <div className="bg-white rounded-2xl p-6 border border-gray-200 mb-6">

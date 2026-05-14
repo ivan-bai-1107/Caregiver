@@ -81,9 +81,6 @@ export function AdminPromptPage() {
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Prompt 模板管理</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            当前模板会被后端 DeepSeek provider 读取；停用时自动回退到内置安全 Prompt。
-          </p>
         </div>
         <button
           onClick={() => void loadPrompts()}

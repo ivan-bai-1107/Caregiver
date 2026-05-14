@@ -71,7 +71,6 @@ export function AdminLayout() {
               <h1 className="text-sm" style={{ fontFamily: "var(--font-display)" }}>
                 医疗照顾者系统
               </h1>
-              <p className="text-xs text-gray-500">后台管理</p>
             </div>
           </div>
         </div>

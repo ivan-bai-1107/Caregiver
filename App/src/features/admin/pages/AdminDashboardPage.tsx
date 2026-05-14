@@ -22,7 +22,6 @@ export function AdminDashboardPage() {
           <h1 className="text-2xl text-gray-900 mb-1" style={{ fontFamily: "var(--font-display)" }}>
             仪表盘
           </h1>
-          <p className="text-gray-500">真实统计来自 FastAPI 与 PostgreSQL。</p>
         </div>
         <button
           onClick={() => void retry()}

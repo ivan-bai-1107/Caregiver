@@ -14,7 +14,10 @@ import {
 } from "lucide-react";
 import type { AIAssistantResponse, AIDraftPayload, AIDraftType, AIIntent } from "@/entities/ai/model";
 import { aiDraftTypeLabels } from "@/entities/ai/mapper";
+import { recordTypeLabels } from "@/entities/care-record/mapper";
+import { careTaskRepeatRuleLabels, careTaskTypeLabels } from "@/entities/care-task/mapper";
 import { sendAssistantMessageStream, storeAIDraft } from "@/features/ai/services/assistant.service";
+import { formatDateTimeLabel } from "@/shared/lib/date";
 
 type MessageRole = "user" | "ai";
 
@@ -70,25 +73,84 @@ function renderContent(content: string) {
   });
 }
 
+function textValue(value: unknown, fallback = "待确认") {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+  return String(value);
+}
+
+function formatDraftDate(value: unknown) {
+  const rawValue = textValue(value, "");
+  if (!rawValue) {
+    return "待确认";
+  }
+
+  try {
+    return formatDateTimeLabel(rawValue);
+  } catch {
+    return rawValue;
+  }
+}
+
+function getRecordTypeLabel(value: unknown) {
+  const key = textValue(value, "") as keyof typeof recordTypeLabels;
+  return recordTypeLabels[key] ?? textValue(value);
+}
+
+function getTaskTypeLabel(value: unknown) {
+  const key = textValue(value, "") as keyof typeof careTaskTypeLabels;
+  return careTaskTypeLabels[key] ?? textValue(value);
+}
+
+function getRepeatRuleLabel(value: unknown) {
+  const key = textValue(value, "") as keyof typeof careTaskRepeatRuleLabels;
+  return careTaskRepeatRuleLabels[key] ?? textValue(value);
+}
+
+function addMetricRow(rows: Array<[string, string]>, label: string, value: unknown, unit = "") {
+  if (value === undefined || value === null || value === "") {
+    return;
+  }
+  rows.push([label, `${String(value)}${unit ? ` ${unit}` : ""}`]);
+}
+
 function getDraftRows(draftType: Exclude<AIDraftType, null>, payload: NonNullable<AIDraftPayload>) {
+  const patientName = textValue(payload.patientName, "待选择患者");
   if (draftType === "record") {
     const metrics = (payload.metrics ?? {}) as Record<string, unknown>;
-    return [
-      ["患者ID", payload.patientId],
-      ["记录类型", payload.recordType],
-      ["收缩压", metrics.bloodPressureSystolic],
-      ["舒张压", metrics.bloodPressureDiastolic],
-      ["记录时间", payload.occurredAt],
-    ].filter(([, value]) => value !== undefined && value !== "");
+    const rows: Array<[string, string]> = [
+      ["患者", patientName],
+      ["记录类型", getRecordTypeLabel(payload.recordType)],
+    ];
+
+    if (payload.recordType === "blood_pressure") {
+      const systolic = textValue(metrics.bloodPressureSystolic, "");
+      const diastolic = textValue(metrics.bloodPressureDiastolic, "");
+      if (systolic || diastolic) {
+        rows.push(["血压", `${systolic || "待确认"}/${diastolic || "待确认"} mmHg`]);
+      }
+    } else {
+      addMetricRow(rows, "体温", metrics.temperature, "°C");
+      addMetricRow(rows, "血糖", metrics.bloodSugar, "mmol/L");
+      addMetricRow(rows, "心率", metrics.heartRate, "次/分");
+      addMetricRow(rows, "药品", metrics.medicationName);
+      addMetricRow(rows, "剂量", metrics.medicationDose);
+      addMetricRow(rows, "饮食内容", metrics.dietDescription);
+      addMetricRow(rows, "状态说明", metrics.observationText);
+    }
+
+    rows.push(["记录时间", formatDraftDate(payload.occurredAt)]);
+    return rows;
   }
 
   return [
-    ["患者ID", payload.patientId],
-    ["任务标题", payload.title],
-    ["任务类型", payload.taskType],
-    ["提醒时间", payload.remindTime],
-    ["重复规则", payload.repeatRule],
-  ].filter(([, value]) => value !== undefined && value !== "");
+    ["患者", patientName],
+    ["任务标题", textValue(payload.title)],
+    ["任务类型", getTaskTypeLabel(payload.taskType)],
+    ["提醒时间", formatDraftDate(payload.remindTime)],
+    ["重复", getRepeatRuleLabel(payload.repeatRule)],
+  ];
 }
 
 function isConfirmableDraftType(draftType: AIDraftType): draftType is Exclude<AIDraftType, null> {

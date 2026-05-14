@@ -60,7 +60,6 @@ export function AdminReviewsPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-2xl text-gray-900 mb-1" style={{ fontFamily: "var(--font-display)" }}>内容审核</h1>
-        <p className="text-gray-500">审核社区帖子和评论，状态统一为 pending / passed / rejected。</p>
       </div>
 
       <div className="flex items-center justify-between mb-6">

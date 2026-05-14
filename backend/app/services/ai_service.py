@@ -159,17 +159,20 @@ def find_patient_in_message(patients: list[Patient], message: str) -> Patient | 
 
 
 def resolve_patient_id(patient_id: str | None, patient_name: str | None, patients: list[Patient]) -> str:
+    patient = resolve_patient(patient_id, patient_name, patients)
+    return patient.id if patient else ""
+
+
+def resolve_patient(patient_id: str | None, patient_name: str | None, patients: list[Patient]) -> Patient | None:
     if patient_id:
         for patient in patients:
             if patient.id == patient_id:
-                return patient.id
+                return patient
 
     if patient_name:
-        matched = match_patient_by_name(patients, patient_name)
-        if matched is not None:
-            return matched.id
+        return match_patient_by_name(patients, patient_name)
 
-    return ""
+    return None
 
 
 def extract_first_number(message: str, default: str = "") -> str:
@@ -252,6 +255,7 @@ def build_record_draft(patients: list[Patient], message: str) -> tuple[str, dict
 
     draft = {
         "patientId": patient.id if patient else "",
+        "patientName": patient.name if patient else "",
         "recordType": record_type,
         "occurredAt": datetime.now(timezone.utc).isoformat(),
         "notes": "AI 根据描述生成的护理记录草稿",
@@ -274,6 +278,7 @@ def build_task_draft(patients: list[Patient], message: str) -> tuple[str, dict[s
 
     draft = {
         "patientId": patient.id if patient else "",
+        "patientName": patient.name if patient else "",
         "title": "测量血压" if task_type == "blood_pressure" else "护理任务",
         "description": message,
         "taskType": task_type,
@@ -334,25 +339,27 @@ def build_rule_based_response(conversation_id: str, patients: list[Patient], mes
 
 def normalize_record_draft(payload: dict[str, Any], patients: list[Patient]) -> dict[str, Any]:
     draft = RecordDraftPayload.model_validate(payload)
-    patient_id = resolve_patient_id(draft.patient_id, draft.patient_name, patients)
+    patient = resolve_patient(draft.patient_id, draft.patient_name, patients)
     normalized = draft.model_dump(
         by_alias=True,
         mode="json",
         exclude={"patient_name"},
     )
-    normalized["patientId"] = patient_id
+    normalized["patientId"] = patient.id if patient else ""
+    normalized["patientName"] = patient.name if patient else ""
     return normalized
 
 
 def normalize_task_draft(payload: dict[str, Any], patients: list[Patient]) -> dict[str, Any]:
     draft = TaskDraftPayload.model_validate(payload)
-    patient_id = resolve_patient_id(draft.patient_id, draft.patient_name, patients)
+    patient = resolve_patient(draft.patient_id, draft.patient_name, patients)
     normalized = draft.model_dump(
         by_alias=True,
         mode="json",
         exclude={"patient_name"},
     )
-    normalized["patientId"] = patient_id
+    normalized["patientId"] = patient.id if patient else ""
+    normalized["patientName"] = patient.name if patient else ""
     return normalized
 
 

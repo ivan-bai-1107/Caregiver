@@ -31,7 +31,6 @@ export function AdminAILogPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-gray-900">AI 日志管理</h1>
-        <p className="text-sm text-gray-500 mt-1">读取真实 ai_assistant_logs，仅做审计查看。</p>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">

@@ -25,7 +25,6 @@ export function AdminLoginPage() {
           <h1 className="text-2xl mb-2" style={{ fontFamily: "var(--font-display)" }}>
             医疗照顾者系统
           </h1>
-          <p className="text-muted-foreground">后台管理登录</p>
         </div>
 
         <div className="bg-card rounded-2xl p-8 border border-border">
@@ -78,12 +77,6 @@ export function AdminLoginPage() {
               {isSubmitting ? "登录中..." : "登录"}
             </button>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-border">
-            <p className="text-xs text-muted-foreground text-center">
-              后台账号独立于前台用户账号。Seed 管理员为 admin@example.com / admin123。
-            </p>
-          </div>
         </div>
 
         <button

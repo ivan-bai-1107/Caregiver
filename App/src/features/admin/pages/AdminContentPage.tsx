@@ -58,7 +58,6 @@ export function AdminContentPage() {
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-2xl text-gray-900 mb-1" style={{ fontFamily: "var(--font-display)" }}>知识内容管理</h1>
-          <p className="text-gray-500">复用 knowledge_articles，支持新增、编辑、上架和下架。</p>
         </div>
         <button
           onClick={openCreate}
