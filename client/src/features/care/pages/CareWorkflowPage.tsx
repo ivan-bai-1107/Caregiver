@@ -12,6 +12,7 @@ import {
   Heart,
   Loader2,
   Pill,
+  Plus,
   RefreshCw,
   Search,
   Sparkles,
@@ -30,6 +31,7 @@ import type { CareWorkbenchPatient, CareWorkbenchTab, CareWorkbenchTask } from "
 import { useCareWorkbenchState } from "@/features/care/state/useCareWorkbenchState";
 import { PullToRefresh } from "@/shared/ui/PullToRefresh";
 import { formatDateTimeLabel } from "@/shared/lib/date";
+import { appRoutes } from "@/shared/constants/routes";
 
 type PatientStatus = "stable" | "attention";
 
@@ -228,12 +230,30 @@ export function CareWorkflowPage() {
           <div className="space-y-3">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs text-muted-foreground">共 {filteredPatients.length} 位患者</p>
-              <button
-                className="text-xs text-primary"
-                onClick={() => navigate("/patients")}
-              >
-                查看全部患者
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="text-xs text-primary"
+                  onClick={() => navigate("/patients")}
+                >
+                  查看全部患者
+                </button>
+                <button
+                  className="flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs text-primary"
+                  onClick={() => navigate(appRoutes.patientNew)}
+                  type="button"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  新增
+                </button>
+                <button
+                  className="flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs text-primary"
+                  onClick={() => navigate(appRoutes.aiAssistant)}
+                  type="button"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  AI 创建
+                </button>
+              </div>
             </div>
             {filteredPatients.map((patient) => {
               const status = getStatusConfig(getPatientStatus(patient));
@@ -277,6 +297,13 @@ export function CareWorkflowPage() {
                   className="px-3 py-1.5 text-primary text-xs"
                 >
                   查看全部记录
+                </button>
+                <button
+                  onClick={() => navigate(appRoutes.recordNew)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  新增
                 </button>
                 <button
                   onClick={() => navigate("/ai-assistant")}
@@ -327,6 +354,13 @@ export function CareWorkflowPage() {
                   className="px-3 py-1.5 text-primary text-xs"
                 >
                   查看全部任务
+                </button>
+                <button
+                  onClick={() => navigate(appRoutes.taskNew)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  新增
                 </button>
                 <button
                   onClick={() => navigate("/ai-assistant")}

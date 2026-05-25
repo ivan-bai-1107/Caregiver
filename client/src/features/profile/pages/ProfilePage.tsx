@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
 import {
   User,
-  Settings,
   Bell,
   FileText,
   HelpCircle,
@@ -10,15 +10,30 @@ import {
   ChevronRight,
   Mail,
   Info,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { logout } from "@/features/auth/services/auth.service";
 import { resolveProfileMediaUrl } from "@/features/profile/services/profile.service";
 import { useProfilePageState } from "@/features/profile/state/useProfilePageState";
+import { getStoredThemeMode, saveThemeMode, type ThemeMode } from "@/shared/theme/themeMode";
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const { profile, stats, isLoading, error, retry } = useProfilePageState();
+  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const avatarUrl = resolveProfileMediaUrl(profile?.avatarUrl ?? "");
+  const isDarkMode = themeMode === "dark";
+
+  useEffect(() => {
+    setThemeMode(getStoredThemeMode());
+  }, []);
+
+  function toggleThemeMode() {
+    const nextMode: ThemeMode = isDarkMode ? "light" : "dark";
+    setThemeMode(nextMode);
+    saveThemeMode(nextMode);
+  }
 
   const menuSections = [
     {
@@ -26,7 +41,6 @@ export function ProfilePage() {
       items: [
         { icon: User, label: "个人信息编辑", path: "/profile/info" },
         { icon: Bell, label: "通知提醒设置", path: "/profile/notifications" },
-        { icon: Settings, label: "应用偏好设置", path: "/profile/settings" },
       ],
     },
     {
@@ -62,10 +76,12 @@ export function ProfilePage() {
             </div>
           </div>
           <button
-            onClick={() => navigate("/profile/info")}
-            className="p-2.5 bg-white/15 rounded-xl"
+            onClick={toggleThemeMode}
+            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 transition-colors hover:bg-white/20"
+            aria-label={isDarkMode ? "切换浅色模式" : "切换夜色模式"}
+            type="button"
           >
-            <Settings className="w-5 h-5" />
+            {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
         </div>
 

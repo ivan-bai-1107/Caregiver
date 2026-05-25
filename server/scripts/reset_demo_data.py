@@ -505,6 +505,7 @@ def create_ai_logs(db, user: User, patients: list[Patient]) -> None:
         db.add(
             AiAssistantLog(
                 user_id=user.id,
+                conversation_id=f"conv_demo_{index:03d}",
                 message=messages[index % len(messages)],
                 intent=intent,
                 answer_text="已结合护理知识库和患者记录生成回复，请在执行前核对患者实际情况。",

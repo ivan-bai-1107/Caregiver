@@ -1,18 +1,11 @@
 import { useEffect } from "react";
 import { RouterProvider } from "react-router";
 import { router } from "@/app/routes";
-import { getUserPreferences } from "@/features/profile/services/profile.service";
-import { getAuthToken } from "@/shared/lib/auth";
+import { applyThemeMode, getStoredThemeMode } from "@/shared/theme/themeMode";
 
 export function AppProviders() {
   useEffect(() => {
-    if (!getAuthToken()) {
-      return;
-    }
-
-    void getUserPreferences().catch(() => {
-      // Preference loading is best-effort; route data must continue to render.
-    });
+    applyThemeMode(getStoredThemeMode());
   }, []);
 
   return <RouterProvider router={router} />;

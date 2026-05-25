@@ -11,7 +11,13 @@ from app.models.ai_log import AiAssistantLog
 from app.models.patient import Patient
 from app.models.user import User
 from app.models.utils import new_id
-from app.schemas.ai import AiAssistantRequest, AiAssistantResponse
+from app.schemas.ai import (
+    AiAssistantRequest,
+    AiAssistantResponse,
+    AiConversationDetail,
+    AiConversationSummary,
+    AiHistoryMessage,
+)
 from app.schemas.base import CamelModel, to_camel
 from app.services.cache_service import invalidate_admin_dashboard_cache
 from app.services.deepseek_service import DeepSeekServiceError, call_deepseek_assistant
@@ -22,8 +28,8 @@ from app.services.prompt_service import (
 )
 from app.services.rag_service import knowledge_source_labels, retrieve_knowledge_context
 
-AIIntent = Literal["qa", "care_record", "care_task", "form_prefill"]
-DraftType = Literal["record", "task"] | None
+AIIntent = Literal["qa", "care_record", "care_task", "care_patient", "form_prefill"]
+DraftType = Literal["record", "task", "patient"] | None
 RecordType = Literal[
     "blood_pressure",
     "temperature",
@@ -45,6 +51,7 @@ TaskType = Literal[
 ]
 RepeatRule = Literal["once", "daily", "weekly", "monthly"]
 Priority = Literal["low", "normal", "high"]
+PatientGender = Literal["男", "女", "其他"]
 
 
 class StrictCamelModel(CamelModel):
@@ -115,6 +122,20 @@ class TaskDraftPayload(StrictCamelModel):
             return ""
         if isinstance(value, str):
             return value.strip()
+        return str(value).strip()
+
+
+class PatientDraftPayload(StrictCamelModel):
+    name: str = Field(min_length=1, max_length=80)
+    age: int = Field(ge=0, le=130)
+    gender: PatientGender
+    profile_note: str = Field(min_length=1)
+
+    @field_validator("name", "gender", "profile_note", mode="before")
+    @classmethod
+    def normalize_text(cls, value: Any) -> str:
+        if value is None:
+            return ""
         return str(value).strip()
 
 
@@ -194,6 +215,8 @@ def detect_intent(message: str) -> str:
     question_keywords = ["哪些", "什么", "怎么", "如何", "为什么", "注意", "建议", "咨询", "？", "?"]
     action_keywords = ["帮我记录", "记录今天", "记录上午", "记录下午", "收缩压", "舒张压", "创建", "任务", "提醒"]
 
+    if re.search(r"(新增|添加|创建|新建)(一位|一个)?患者", message):
+        return "care_patient"
     if any(keyword in message for keyword in question_keywords) and not any(
         keyword in message for keyword in action_keywords
     ):
@@ -297,6 +320,42 @@ def build_task_draft(patients: list[Patient], message: str) -> tuple[str, dict[s
     return answer, draft, "task", risk_note
 
 
+def extract_patient_name(message: str) -> str:
+    patterns = [
+        r"姓名[:：]?\s*([\u4e00-\u9fa5A-Za-z]{2,12})",
+        r"患者[:：]?\s*([\u4e00-\u9fa5A-Za-z]{2,12})",
+        r"(?:新增|添加|创建|新建)(?:一位|一个)?患者[，,。 ]*([\u4e00-\u9fa5A-Za-z]{2,12})",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, message)
+        if match:
+            return match.group(1).strip()
+    return ""
+
+
+def extract_patient_gender(message: str) -> str:
+    if "女" in message:
+        return "女"
+    if "男" in message:
+        return "男"
+    return "其他"
+
+
+def build_patient_draft(message: str) -> tuple[str, dict[str, Any], str, str]:
+    age_match = re.search(r"(\d{1,3})\s*岁", message)
+    name = extract_patient_name(message)
+    profile_note = message.strip()
+    draft = {
+        "name": name,
+        "age": int(age_match.group(1)) if age_match else 0,
+        "gender": extract_patient_gender(message),
+        "profileNote": profile_note,
+    }
+    answer = "我已生成患者信息草稿，请确认。"
+    risk_note = "请核对患者姓名、年龄、性别和护理说明后再确认保存。"
+    return answer, draft, "patient", risk_note
+
+
 def build_qa_answer(message: str, knowledge_context: list[dict[str, Any]] | None = None) -> tuple[str, list[str], str]:
     context = knowledge_context or []
     if context:
@@ -346,6 +405,8 @@ def build_rule_based_response(
         answer_text, draft_payload, draft_type, risk_note = build_record_draft(patients, message)
     elif intent == "care_task":
         answer_text, draft_payload, draft_type, risk_note = build_task_draft(patients, message)
+    elif intent == "care_patient":
+        answer_text, draft_payload, draft_type, risk_note = build_patient_draft(message)
     else:
         answer_text, sources, risk_note = build_qa_answer(message, knowledge_context)
 
@@ -387,6 +448,11 @@ def normalize_task_draft(payload: dict[str, Any], patients: list[Patient]) -> di
     return normalized
 
 
+def normalize_patient_draft(payload: dict[str, Any]) -> dict[str, Any]:
+    draft = PatientDraftPayload.model_validate(payload)
+    return draft.model_dump(by_alias=True, mode="json")
+
+
 def validate_provider_response(
     conversation_id: str,
     raw_response: dict[str, Any],
@@ -408,6 +474,8 @@ def validate_provider_response(
         raise ValueError("care_record intent requires record draftType")
     if provider_response.intent == "care_task" and provider_response.draft_type != "task":
         raise ValueError("care_task intent requires task draftType")
+    if provider_response.intent == "care_patient" and provider_response.draft_type != "patient":
+        raise ValueError("care_patient intent requires patient draftType")
     if provider_response.intent in {"qa", "form_prefill"} and provider_response.draft_type is not None:
         raise ValueError("qa and form_prefill intents must not return a draft")
 
@@ -426,6 +494,12 @@ def validate_provider_response(
         if provider_response.draft_payload is None:
             raise ValueError("task draftPayload is required")
         draft_payload = normalize_task_draft(provider_response.draft_payload, patients)
+    elif provider_response.draft_type == "patient":
+        if provider_response.intent != "care_patient":
+            raise ValueError("patient draft requires care_patient intent")
+        if provider_response.draft_payload is None:
+            raise ValueError("patient draftPayload is required")
+        draft_payload = normalize_patient_draft(provider_response.draft_payload)
 
     rag_sources = knowledge_source_labels(knowledge_context or [])
     sources = provider_response.sources or rag_sources
@@ -475,6 +549,7 @@ def write_ai_log(db: Session, user: User, message: str, response: AiAssistantRes
     db.add(
         AiAssistantLog(
             user_id=user.id,
+            conversation_id=response.conversation_id,
             message=message,
             intent=response.intent,
             answer_text=response.answer_text,
@@ -488,10 +563,104 @@ def write_ai_log(db: Session, user: User, message: str, response: AiAssistantRes
     invalidate_admin_dashboard_cache()
 
 
+def build_conversation_title(message: str) -> str:
+    title = message.strip().replace("\n", " ")
+    if len(title) > 24:
+        return f"{title[:24]}..."
+    return title or "AI 护理对话"
+
+
+def list_ai_conversations(db: Session, user: User, limit: int = 30) -> list[AiConversationSummary]:
+    logs = list(
+        db.scalars(
+            select(AiAssistantLog)
+            .where(
+                AiAssistantLog.user_id == user.id,
+                AiAssistantLog.conversation_id != "",
+            )
+            .order_by(AiAssistantLog.created_at.desc())
+            .limit(200)
+        ).all()
+    )
+
+    grouped: dict[str, list[AiAssistantLog]] = {}
+    for log in logs:
+        grouped.setdefault(log.conversation_id, []).append(log)
+
+    summaries: list[AiConversationSummary] = []
+    for conversation_id, items in grouped.items():
+        ordered = sorted(items, key=lambda item: item.created_at)
+        latest = ordered[-1]
+        summaries.append(
+            AiConversationSummary(
+                conversation_id=conversation_id,
+                title=build_conversation_title(ordered[0].message),
+                last_message=latest.answer_text,
+                message_count=len(ordered) * 2,
+                updated_at=latest.created_at.isoformat(),
+            )
+        )
+
+    return sorted(summaries, key=lambda item: item.updated_at, reverse=True)[:limit]
+
+
+def get_ai_conversation(db: Session, user: User, conversation_id: str) -> AiConversationDetail | None:
+    logs = list(
+        db.scalars(
+            select(AiAssistantLog)
+            .where(
+                AiAssistantLog.user_id == user.id,
+                AiAssistantLog.conversation_id == conversation_id,
+            )
+            .order_by(AiAssistantLog.created_at.asc())
+        ).all()
+    )
+    if not logs:
+        return None
+
+    messages: list[AiHistoryMessage] = []
+    for log in logs:
+        timestamp = log.created_at.isoformat()
+        messages.append(
+            AiHistoryMessage(
+                id=f"{log.id}-user",
+                role="user",
+                content=log.message,
+                timestamp=timestamp,
+            )
+        )
+        messages.append(
+            AiHistoryMessage(
+                id=f"{log.id}-ai",
+                role="ai",
+                content=log.answer_text,
+                timestamp=timestamp,
+                intent=log.intent,
+                draft_type=log.draft_type,
+                draft_payload=log.draft_payload,
+                sources=log.sources,
+                risk_note=log.risk_note,
+                generated_by="ai",
+            )
+        )
+
+    return AiConversationDetail(
+        conversation_id=conversation_id,
+        title=build_conversation_title(logs[0].message),
+        messages=messages,
+    )
+
+
 def handle_assistant_message(db: Session, user: User, payload: AiAssistantRequest) -> AiAssistantResponse:
     conversation_id = payload.conversation_id or new_id("conv")
     patients = list_user_patients(db, user)
     knowledge_context = retrieve_knowledge_context(db, payload.message)
+    intent = detect_intent(payload.message)
+
+    if intent == "care_patient":
+        response = build_rule_based_response(conversation_id, patients, payload.message, knowledge_context)
+        write_ai_log(db, user, payload.message, response)
+        return response
 
     if should_use_deepseek():
         try:

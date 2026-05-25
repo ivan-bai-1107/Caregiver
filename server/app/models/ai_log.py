@@ -14,6 +14,7 @@ class AiAssistantLog(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("ail"))
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    conversation_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     intent: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     answer_text: Mapped[str] = mapped_column(Text, nullable=False)

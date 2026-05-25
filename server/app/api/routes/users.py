@@ -7,7 +7,13 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.responses import success_response
 from app.models.user import User
-from app.schemas.user import UserAvatarUpdate, UserNotificationSettings, UserPreferences, UserProfileUpdate
+from app.schemas.user import (
+    UserAvatarUpdate,
+    UserNotificationSettings,
+    UserPasswordUpdate,
+    UserPreferences,
+    UserProfileUpdate,
+)
 from app.services.user_service import (
     get_or_create_notification_settings,
     get_or_create_preferences,
@@ -18,6 +24,7 @@ from app.services.user_service import (
     update_notification_settings,
     update_preferences,
     update_user_avatar,
+    update_user_password,
     update_user_profile,
 )
 
@@ -45,6 +52,16 @@ def update_my_avatar(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> dict[str, object]:
     return success_response(update_user_avatar(db, current_user, payload))
+
+
+@router.put("/me/password")
+def update_my_password(
+    payload: UserPasswordUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, object]:
+    update_user_password(db, current_user, payload)
+    return success_response(message="密码已更新，请使用新密码登录。")
 
 
 @router.get("/me/stats")

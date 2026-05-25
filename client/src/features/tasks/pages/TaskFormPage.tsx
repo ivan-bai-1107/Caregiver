@@ -258,14 +258,6 @@ export function TaskFormPage() {
 
           <TaskValidationSummary messages={formState.validationMessages} />
 
-          <div className="rounded-2xl border border-chart-2/20 bg-chart-2/5 p-4">
-            <p className="text-sm leading-relaxed text-foreground/75">
-              <span className="font-medium text-chart-2">提示：</span>
-              当前任务表单已经基于正式 `CareTaskDraft` 驱动，患者显示信息只停留在视图层，
-              不会再回流污染核心 `CareTask` 实体。
-            </p>
-          </div>
-
           <button
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-primary-foreground shadow-md transition-colors hover:bg-primary/90 disabled:opacity-70"
             disabled={formState.isSubmitting || formState.availablePatients.length === 0}

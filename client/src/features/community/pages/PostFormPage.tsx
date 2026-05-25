@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { AlertCircle, ArrowLeft, Send, Shield } from "lucide-react";
+import { ArrowLeft, Send, Shield } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { communityTagOptions } from "@/features/community/model";
 import { usePostFormState } from "@/features/community/state/usePostFormState";
@@ -111,15 +111,6 @@ export function PostFormPage() {
               {error}
             </div>
           ) : null}
-
-          <div className="bg-chart-2/10 border border-chart-2/20 rounded-2xl p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-chart-2 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-foreground/80">
-                您的帖子会写入数据库并进入待审核队列，审核通过后才会对其他用户展示。
-              </p>
-            </div>
-          </div>
 
           <button
             type="submit"

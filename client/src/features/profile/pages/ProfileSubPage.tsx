@@ -3,11 +3,9 @@ import { ArrowLeft, FileText, HelpCircle, Info, Shield, User } from "lucide-reac
 import { toast, Toaster } from "sonner";
 import { ProfileInfoSection } from "@/features/profile/components/ProfileInfoSection";
 import { ProfileNotificationSettingsSection } from "@/features/profile/components/ProfileNotificationSettingsSection";
-import { ProfilePreferencesSection } from "@/features/profile/components/ProfilePreferencesSection";
 import { StaticProfileContent } from "@/features/profile/components/StaticProfileContent";
 import { useProfileInfoState } from "@/features/profile/state/useProfileInfoState";
 import { useProfileNotificationSettingsState } from "@/features/profile/state/useProfileNotificationSettingsState";
-import { useProfilePreferencesState } from "@/features/profile/state/useProfilePreferencesState";
 
 const staticPages: Record<string, { title: string; icon: typeof User; content: string }> = {
   about: {
@@ -20,7 +18,7 @@ const staticPages: Record<string, { title: string; icon: typeof User; content: s
     title: "使用指南与帮助",
     icon: HelpCircle,
     content:
-      "快速入门：\n\n1. 首页查看今日任务和患者状态概览\n2. 在「照护」页面管理患者信息和护理记录\n3. 使用 AI 助手快速记录数据或咨询护理问题\n4. 在「学习」版块浏览护理知识文章\n5. 在「我的」页面管理个人信息和偏好设置\n\n如有疑问，请联系客服：support@careapp.com",
+      "快速入门：\n\n1. 首页查看今日任务和患者状态概览\n2. 在「照护」页面管理患者信息和护理记录\n3. 使用 AI 助手快速记录数据或咨询护理问题\n4. 在「学习」版块浏览护理知识文章\n5. 在「我的」页面管理个人信息和通知提醒\n\n如有疑问，请联系客服：support@careapp.com",
   },
   privacy: {
     title: "隐私政策",
@@ -71,11 +69,18 @@ function ProfileInfoContent() {
   return (
     <ProfileInfoSection
       profileId={infoState.profileId}
+      originalEmail={infoState.originalEmail}
       draft={infoState.draft}
+      passwordDraft={infoState.passwordDraft}
       fieldErrors={infoState.fieldErrors}
+      passwordFieldErrors={infoState.passwordFieldErrors}
       isSubmitting={infoState.isSubmitting}
+      isPasswordSubmitting={infoState.isPasswordSubmitting}
       isUploadingAvatar={infoState.isUploadingAvatar}
+      isSendingEmailCode={infoState.isSendingEmailCode}
+      emailCodeCountdown={infoState.emailCodeCountdown}
       onChange={infoState.updateDraft}
+      onPasswordChange={infoState.updatePasswordDraft}
       onAvatarUpload={async (imageData) => {
         const result = await infoState.uploadAvatar(imageData);
         if (!result.ok) {
@@ -84,13 +89,29 @@ function ProfileInfoContent() {
         }
         toast.success("头像已更新");
       }}
+      onRequestEmailCode={async () => {
+        const result = await infoState.requestEmailCode();
+        if (!result.ok) {
+          toast.error(result.message ?? "验证码发送失败，请稍后重试。");
+          return;
+        }
+        toast.success("验证码已发送");
+      }}
       onSubmit={async () => {
         const result = await infoState.submit();
         if (!result.ok) {
-          toast.error("请先完善个人资料");
+          toast.error(result.message ?? "请先完善个人资料");
           return;
         }
         toast.success("个人资料已保存");
+      }}
+      onPasswordSubmit={async () => {
+        const result = await infoState.submitPassword();
+        if (!result.ok) {
+          toast.error(result.message ?? "请先完善密码信息");
+          return;
+        }
+        toast.success("密码已修改");
       }}
     />
   );
@@ -127,38 +148,6 @@ function ProfileNotificationsContent() {
   );
 }
 
-function ProfilePreferencesContent() {
-  const preferencesState = useProfilePreferencesState();
-
-  if (preferencesState.isLoading) {
-    return (
-      <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
-        偏好设置加载中...
-      </div>
-    );
-  }
-
-  if (preferencesState.loadError) {
-    return renderStateBox("偏好设置加载失败", preferencesState.loadError, preferencesState.retry);
-  }
-
-  return (
-    <ProfilePreferencesSection
-      preferences={preferencesState.preferences}
-      isSubmitting={preferencesState.isSubmitting}
-      onChange={preferencesState.updatePreference}
-      onSubmit={async () => {
-        const result = await preferencesState.submit();
-        if (!result.ok) {
-          toast.error("偏好设置保存失败，请稍后重试。");
-          return;
-        }
-        toast.success("偏好设置已保存");
-      }}
-    />
-  );
-}
-
 export function ProfileSubPage() {
   const navigate = useNavigate();
   const { section } = useParams<{ section: string }>();
@@ -169,8 +158,6 @@ export function ProfileSubPage() {
       ? "个人信息编辑"
       : sectionKey === "notifications"
         ? "通知提醒设置"
-        : sectionKey === "settings"
-          ? "应用偏好设置"
         : staticPages[sectionKey]?.title || "页面未找到";
 
   function renderContent() {
@@ -180,10 +167,6 @@ export function ProfileSubPage() {
 
     if (sectionKey === "notifications") {
       return <ProfileNotificationsContent />;
-    }
-
-    if (sectionKey === "settings") {
-      return <ProfilePreferencesContent />;
     }
 
     if (staticPages[sectionKey]) {

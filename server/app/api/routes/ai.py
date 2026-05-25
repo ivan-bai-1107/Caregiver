@@ -1,7 +1,7 @@
 from typing import Annotated
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,7 @@ from app.core.responses import success_response
 from app.core.responses import serialize_payload
 from app.models.user import User
 from app.schemas.ai import AiAssistantRequest
-from app.services.ai_service import handle_assistant_message
+from app.services.ai_service import get_ai_conversation, handle_assistant_message, list_ai_conversations
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -51,6 +51,27 @@ def assistant(
 ) -> dict[str, object]:
     ensure_ai_rate_limit(current_user.id)
     return success_response(handle_assistant_message(db, current_user, payload))
+
+
+@router.get("/assistant/history")
+def assistant_history(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    limit: Annotated[int, Query(ge=1, le=50)] = 30,
+) -> dict[str, object]:
+    return success_response(list_ai_conversations(db, current_user, limit))
+
+
+@router.get("/assistant/history/{conversation_id}")
+def assistant_history_detail(
+    conversation_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, object]:
+    conversation = get_ai_conversation(db, current_user, conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="AI 对话记录不存在")
+    return success_response(conversation)
 
 
 def sse_payload(event_type: str, data: object) -> str:

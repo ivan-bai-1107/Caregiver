@@ -10,4 +10,5 @@ export const aiIntentLabels: Record<AIIntent, string> = {
 export const aiDraftTypeLabels: Record<Exclude<AIDraftType, null>, string> = {
   record: "护理记录草稿",
   task: "护理任务草稿",
+  patient: "患者信息草稿",
 };

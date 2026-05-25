@@ -181,14 +181,6 @@ export function RecordFormPage() {
           <RecordValidationSummary messages={formState.validation.messages} />
         ) : null}
 
-        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
-          <p className="text-sm text-foreground/75 leading-relaxed">
-            <span className="font-medium text-primary">提示：</span>
-            当前页面已改为正式草稿模型驱动。护理记录仍保持 care_record + care_metric 双层方向，
-            血压继续使用收缩压和舒张压双字段录入，不会退回普通文本表单。
-          </p>
-        </div>
-
         <button
           type="submit"
           disabled={formState.isSubmitting}

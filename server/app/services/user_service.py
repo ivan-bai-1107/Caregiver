@@ -15,10 +15,20 @@ from app.models.user_settings import UserNotificationSetting, UserPreference
 from app.schemas.user import (
     UserAvatarUpdate,
     UserNotificationSettings,
+    UserPasswordUpdate,
     UserPreferences,
     UserProfile,
     UserProfileUpdate,
     UserStats,
+)
+from app.core.redis import redis_delete
+from app.core.security import hash_password, verify_password
+from app.models.utils import utc_now
+from app.services.auth_service import (
+    clear_email_code_limits,
+    clear_login_failures,
+    email_code_cache_key,
+    verify_email_code_or_raise,
 )
 
 AVATAR_UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads" / "avatars"
@@ -37,15 +47,36 @@ def to_user_profile(user: User) -> UserProfile:
 
 
 def update_user_profile(db: Session, user: User, payload: UserProfileUpdate) -> UserProfile:
-    existing_user = db.scalar(select(User).where(User.email == payload.email, User.id != user.id))
-    if existing_user is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="该邮箱已被其他用户使用。")
+    next_email = str(payload.email).strip()
+    is_email_changed = next_email.lower() != user.email.lower()
+
+    if is_email_changed:
+        if not payload.email_code or not payload.email_code.strip():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="请先完成新邮箱验证码验证。")
+
+        existing_user = db.scalar(select(User).where(User.email == next_email, User.id != user.id))
+        if existing_user is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="该邮箱已被其他用户使用。")
+
+        verification_code = verify_email_code_or_raise(db, next_email, payload.email_code.strip())
+        verification_code.used_at = utc_now()
+        redis_delete(email_code_cache_key(next_email))
+        clear_email_code_limits(next_email)
 
     user.username = payload.username
-    user.email = payload.email
+    user.email = next_email
     db.commit()
     db.refresh(user)
     return to_user_profile(user)
+
+
+def update_user_password(db: Session, user: User, payload: UserPasswordUpdate) -> None:
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="当前密码不正确。")
+
+    user.password_hash = hash_password(payload.new_password)
+    db.commit()
+    clear_login_failures(user.email)
 
 
 def update_user_avatar(db: Session, user: User, payload: UserAvatarUpdate) -> UserProfile:

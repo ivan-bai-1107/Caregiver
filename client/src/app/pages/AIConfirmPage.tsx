@@ -20,9 +20,16 @@ import {
   type CareTaskType,
 } from "@/entities/care-task/model";
 import { getPatientOptions } from "@/features/patients/services/patient.service";
+import {
+  createPatient,
+  validatePatientFormDraft,
+  type PatientFormDraft,
+} from "@/features/patients/services/patient.service";
+import type { PatientGender } from "@/entities/patient/model";
 import { submitRecordDraft } from "@/features/records/services/record.service";
 import { createCareTask } from "@/features/tasks/services/task.service";
 import {
+  clearStoredAIChatSnapshot,
   clearStoredAIDraft,
   readStoredAIDraft,
   type StoredAIDraft,
@@ -131,6 +138,29 @@ function buildTaskDraft(storedDraft: StoredAIDraft | null): CareTaskDraft {
   });
 }
 
+function toPatientGender(value: unknown): PatientGender | "" {
+  return value === "男" || value === "女" || value === "其他" ? value : "";
+}
+
+function buildPatientDraft(storedDraft: StoredAIDraft | null): PatientFormDraft {
+  if (!storedDraft || storedDraft.draftType !== "patient") {
+    return {
+      name: "",
+      age: "",
+      gender: "",
+      profileNote: "",
+    };
+  }
+
+  const payload = storedDraft.draftPayload;
+  return {
+    name: asString(payload.name),
+    age: asString(payload.age),
+    gender: toPatientGender(payload.gender),
+    profileNote: asString(payload.profileNote),
+  };
+}
+
 export function AIConfirmPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -138,6 +168,7 @@ export function AIConfirmPage() {
   const [availablePatients, setAvailablePatients] = useState<PatientOption[]>([]);
   const [recordDraft, setRecordDraft] = useState<CareRecordDraft>(() => buildRecordDraft(storedDraft));
   const [taskDraft, setTaskDraft] = useState<CareTaskDraft>(() => buildTaskDraft(storedDraft));
+  const [patientDraft, setPatientDraft] = useState<PatientFormDraft>(() => buildPatientDraft(storedDraft));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const draftType = storedDraft?.draftType ?? searchParams.get("type");
 
@@ -154,6 +185,9 @@ export function AIConfirmPage() {
   }, []);
 
   const pageTitle = useMemo(() => {
+    if (draftType === "patient") {
+      return "确认患者信息";
+    }
     if (draftType === "task") {
       return "确认护理任务";
     }
@@ -184,6 +218,13 @@ export function AIConfirmPage() {
     }));
   }
 
+  function updatePatientDraft<Key extends keyof PatientFormDraft>(key: Key, value: PatientFormDraft[Key]) {
+    setPatientDraft((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
   async function handleConfirm() {
     if (!storedDraft) {
       toast.error("没有可确认的 AI 草稿");
@@ -202,8 +243,24 @@ export function AIConfirmPage() {
 
         await submitRecordDraft(recordDraft, "ai");
         clearStoredAIDraft();
+        clearStoredAIChatSnapshot();
         toast.success("护理记录已保存");
         setTimeout(() => navigate("/records"), 500);
+        return;
+      }
+
+      if (storedDraft.draftType === "patient") {
+        const validation = validatePatientFormDraft(patientDraft);
+        if (!validation.isValid) {
+          toast.error(Object.values(validation.fieldErrors)[0] ?? "请补全患者信息");
+          return;
+        }
+
+        const patient = await createPatient(patientDraft);
+        clearStoredAIDraft();
+        clearStoredAIChatSnapshot();
+        toast.success("患者已创建");
+        setTimeout(() => navigate(`/patients/${patient.id}`), 500);
         return;
       }
 
@@ -215,6 +272,7 @@ export function AIConfirmPage() {
 
       await createCareTask(taskDraft);
       clearStoredAIDraft();
+      clearStoredAIChatSnapshot();
       toast.success("护理任务已保存");
       setTimeout(() => navigate("/tasks"), 500);
     } catch {
@@ -468,16 +526,62 @@ export function AIConfirmPage() {
     </div>
   );
 
+  const renderPatientForm = () => (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-xs text-muted-foreground mb-1.5">姓名</label>
+        <input
+          value={patientDraft.name}
+          onChange={(event) => updatePatientDraft("name", event.target.value)}
+          className="w-full px-4 py-3 bg-input-background rounded-xl border border-transparent focus:border-primary focus:outline-none transition-colors"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-muted-foreground mb-1.5">年龄</label>
+          <input
+            type="number"
+            value={patientDraft.age}
+            onChange={(event) => updatePatientDraft("age", event.target.value)}
+            className="w-full px-4 py-3 bg-input-background rounded-xl border border-transparent focus:border-primary focus:outline-none transition-colors"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-muted-foreground mb-1.5">性别</label>
+          <select
+            value={patientDraft.gender}
+            onChange={(event) => updatePatientDraft("gender", event.target.value as PatientFormDraft["gender"])}
+            className="w-full px-4 py-3 bg-input-background rounded-xl border border-transparent focus:border-primary focus:outline-none transition-colors"
+          >
+            <option value="">请选择</option>
+            <option value="男">男</option>
+            <option value="女">女</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs text-muted-foreground mb-1.5">护理说明</label>
+        <textarea
+          value={patientDraft.profileNote}
+          onChange={(event) => updatePatientDraft("profileNote", event.target.value)}
+          rows={5}
+          className="w-full px-4 py-3 bg-input-background rounded-xl border border-transparent focus:border-primary focus:outline-none transition-colors resize-none"
+        />
+      </div>
+    </div>
+  );
+
   if (!storedDraft) {
     return (
       <div className="min-h-screen bg-background px-6 py-12">
         <Toaster position="top-center" richColors />
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 mb-6">
+        <button onClick={() => navigate("/ai-assistant")} className="p-2 -ml-2 mb-6">
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div className="bg-card border border-border rounded-2xl p-5">
           <p className="font-medium mb-2">没有可确认的 AI 草稿</p>
-          <p className="text-sm text-muted-foreground mb-4">请先从 AI 护理助手生成护理记录或护理任务草稿。</p>
+          <p className="text-sm text-muted-foreground mb-4">请先从 AI 护理助手生成患者、护理记录或护理任务草稿。</p>
           <button
             onClick={() => navigate("/ai-assistant")}
             className="w-full py-3 bg-primary text-primary-foreground rounded-xl text-sm"
@@ -494,7 +598,7 @@ export function AIConfirmPage() {
       <Toaster position="top-center" richColors />
       <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2">
+          <button onClick={() => navigate("/ai-assistant")} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6" />
           </button>
           <h1 className="text-xl" style={{ fontFamily: "var(--font-display)" }}>
@@ -508,7 +612,11 @@ export function AIConfirmPage() {
           </div>
           <div>
             <p className="text-xs text-white/70 mb-0.5">
-              {storedDraft.draftType === "record" ? "AI 识别意图：护理记录" : "AI 识别意图：护理任务"}
+              {storedDraft.draftType === "record"
+                ? "AI 识别意图：护理记录"
+                : storedDraft.draftType === "patient"
+                  ? "AI 识别意图：患者信息"
+                  : "AI 识别意图：护理任务"}
             </p>
             <p className="text-sm text-white/90">AI 已预填写以下信息，请核对后确认保存</p>
           </div>
@@ -527,7 +635,11 @@ export function AIConfirmPage() {
         </div>
 
         <div className="bg-card rounded-2xl p-5 border border-border">
-          {storedDraft.draftType === "record" ? renderRecordForm() : renderTaskForm()}
+          {storedDraft.draftType === "record"
+            ? renderRecordForm()
+            : storedDraft.draftType === "patient"
+              ? renderPatientForm()
+              : renderTaskForm()}
         </div>
 
         <div className="flex items-start gap-3 bg-accent/5 border border-accent/20 rounded-2xl p-4">
@@ -537,7 +649,7 @@ export function AIConfirmPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/ai-assistant")}
             className="py-4 bg-muted/50 text-foreground rounded-2xl hover:bg-muted transition-colors text-sm"
           >
             返回修改

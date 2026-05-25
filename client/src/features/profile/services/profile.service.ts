@@ -1,5 +1,6 @@
 import type {
   UserNotificationSettings,
+  UserPasswordDraft,
   UserPreferences,
   UserProfile,
   UserProfileDraft,
@@ -97,10 +98,18 @@ export async function updateUserProfile(draft: UserProfileDraft) {
   const response = await apiClient.put<UserProfileDto>("/api/users/me", {
     username: draft.username.trim(),
     email: draft.email.trim(),
+    emailCode: draft.emailCode.trim() || undefined,
   });
   const profile = toUserProfile(response);
   setCurrentUser(profile);
   return profile;
+}
+
+export async function updateUserPassword(draft: UserPasswordDraft) {
+  return apiClient.put<null>("/api/users/me/password", {
+    currentPassword: draft.currentPassword,
+    newPassword: draft.newPassword,
+  });
 }
 
 export async function updateUserAvatar(imageData: string) {

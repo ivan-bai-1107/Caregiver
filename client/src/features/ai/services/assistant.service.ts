@@ -1,9 +1,15 @@
-import type { AIAssistantRequest, AIAssistantResponse } from "@/entities/ai/model";
+import type {
+  AIAssistantRequest,
+  AIAssistantResponse,
+  AIConversationDetail,
+  AIConversationSummary,
+} from "@/entities/ai/model";
 import { env } from "@/shared/constants/env";
 import { apiClient } from "@/shared/lib/apiClient";
 import { getAuthToken } from "@/shared/lib/auth";
 
 export const aiDraftStorageKey = "care-app-ai-confirm-draft";
+export const aiChatSnapshotStorageKey = "care-app-ai-chat-snapshot";
 
 export interface StoredAIDraft {
   draftType: Exclude<AIAssistantResponse["draftType"], null>;
@@ -12,8 +18,34 @@ export interface StoredAIDraft {
   riskNote: string;
 }
 
+export interface StoredAIChatMessage {
+  id: string;
+  role: "user" | "ai";
+  content: string;
+  timestamp: string;
+  intent?: AIAssistantResponse["intent"];
+  draftType?: AIAssistantResponse["draftType"];
+  draftPayload?: AIAssistantResponse["draftPayload"];
+  sources?: string[];
+  riskNote?: string;
+  generatedBy?: string;
+}
+
+export interface StoredAIChatSnapshot {
+  conversationId: string | null;
+  messages: StoredAIChatMessage[];
+}
+
 export async function sendAssistantMessage(payload: AIAssistantRequest) {
   return apiClient.post<AIAssistantResponse>("/api/ai/assistant", payload);
+}
+
+export async function listAssistantHistory(limit = 30) {
+  return apiClient.get<AIConversationSummary[]>("/api/ai/assistant/history", { limit });
+}
+
+export async function getAssistantHistory(conversationId: string) {
+  return apiClient.get<AIConversationDetail>(`/api/ai/assistant/history/${conversationId}`);
 }
 
 interface StreamEnvelope {
@@ -92,7 +124,7 @@ export function readStoredAIDraft(): StoredAIDraft | null {
 
   try {
     const parsed = JSON.parse(rawValue) as Partial<StoredAIDraft>;
-    if (parsed.draftType !== "record" && parsed.draftType !== "task") {
+    if (parsed.draftType !== "record" && parsed.draftType !== "task" && parsed.draftType !== "patient") {
       return null;
     }
     if (
@@ -113,4 +145,39 @@ export function readStoredAIDraft(): StoredAIDraft | null {
 
 export function clearStoredAIDraft() {
   sessionStorage.removeItem(aiDraftStorageKey);
+}
+
+export function storeAIChatSnapshot(snapshot: StoredAIChatSnapshot) {
+  sessionStorage.setItem(aiChatSnapshotStorageKey, JSON.stringify(snapshot));
+}
+
+export function readStoredAIChatSnapshot(): StoredAIChatSnapshot | null {
+  const rawValue = sessionStorage.getItem(aiChatSnapshotStorageKey);
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as Partial<StoredAIChatSnapshot>;
+    if (!Array.isArray(parsed.messages)) {
+      return null;
+    }
+    return {
+      conversationId: typeof parsed.conversationId === "string" ? parsed.conversationId : null,
+      messages: parsed.messages.filter(
+        (message): message is StoredAIChatMessage =>
+          Boolean(message) &&
+          (message.role === "user" || message.role === "ai") &&
+          typeof message.id === "string" &&
+          typeof message.content === "string" &&
+          typeof message.timestamp === "string",
+      ),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function clearStoredAIChatSnapshot() {
+  sessionStorage.removeItem(aiChatSnapshotStorageKey);
 }

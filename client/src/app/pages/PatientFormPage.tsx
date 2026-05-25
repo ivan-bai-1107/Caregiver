@@ -1,7 +1,8 @@
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Save, ClipboardList } from "lucide-react";
+import { ArrowLeft, Save, Sparkles } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { usePatientFormState } from "@/features/patients/state/usePatientFormState";
+import { appRoutes } from "@/shared/constants/routes";
 
 export function PatientFormPage() {
   const navigate = useNavigate();
@@ -31,14 +32,25 @@ export function PatientFormPage() {
       <Toaster position="top-center" richColors />
 
       <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-6 rounded-b-[2rem]">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2">
           <button onClick={() => navigate(-1)} className="p-2 -ml-2">
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-2xl" style={{ fontFamily: "var(--font-display)" }}>
+          <h1 className="text-xl" style={{ fontFamily: "var(--font-display)" }}>
             {isEdit ? "编辑患者" : "添加患者"}
           </h1>
-          <div className="w-10" />
+          {isEdit ? (
+            <div className="w-20" />
+          ) : (
+            <button
+              onClick={() => navigate(appRoutes.aiAssistant)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/20 rounded-xl text-sm"
+              type="button"
+            >
+              <Sparkles className="w-4 h-4" />
+              AI助手
+            </button>
+          )}
         </div>
       </div>
 
@@ -61,12 +73,12 @@ export function PatientFormPage() {
       ) : null}
 
       {!isLoading && !loadError ? (
-        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
+        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-5 pb-10">
           <div className="bg-card rounded-2xl p-5 border border-border space-y-4">
-            <h2 className="font-medium mb-2">基本信息</h2>
+            <h2 className="text-sm text-muted-foreground uppercase tracking-wide">基本信息</h2>
 
             <div>
-              <label className="block text-sm text-foreground/80 mb-2">
+              <label className="block text-sm mb-2">
                 姓名 <span className="text-destructive">*</span>
               </label>
               <input
@@ -82,7 +94,7 @@ export function PatientFormPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-foreground/80 mb-2">
+                <label className="block text-sm mb-2">
                   年龄 <span className="text-destructive">*</span>
                 </label>
                 <input
@@ -96,7 +108,7 @@ export function PatientFormPage() {
                 {fieldErrors.age ? <p className="mt-2 text-xs text-destructive">{fieldErrors.age}</p> : null}
               </div>
               <div>
-                <label className="block text-sm text-foreground/80 mb-2">
+                <label className="block text-sm mb-2">
                   性别 <span className="text-destructive">*</span>
                 </label>
                 <select
@@ -118,8 +130,7 @@ export function PatientFormPage() {
           </div>
 
           <div className="bg-card rounded-2xl p-5 border border-border space-y-4">
-            <h2 className="flex items-center gap-2 font-medium mb-2">
-              <ClipboardList className="w-4 h-4 text-muted-foreground" />
+            <h2 className="text-sm text-muted-foreground uppercase tracking-wide">
               护理说明
             </h2>
             <textarea
@@ -132,9 +143,6 @@ export function PatientFormPage() {
             {fieldErrors.profileNote ? (
               <p className="text-xs text-destructive">{fieldErrors.profileNote}</p>
             ) : null}
-            <p className="text-xs text-muted-foreground">
-              当前表单只提交 Patient 核心字段，病情与护理补充说明统一收口到 `profileNote`。
-            </p>
           </div>
 
           <button

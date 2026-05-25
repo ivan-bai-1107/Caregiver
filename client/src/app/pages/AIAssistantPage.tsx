@@ -1,22 +1,38 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import {
   ArrowLeft,
   Bot,
   CheckSquare,
   ChevronRight,
+  Clock,
   FileText,
   HelpCircle,
   Mic,
   Send,
   Sparkles,
   User,
+  X,
 } from "lucide-react";
-import type { AIAssistantResponse, AIDraftPayload, AIDraftType, AIIntent } from "@/entities/ai/model";
+import type {
+  AIAssistantResponse,
+  AIConversationSummary,
+  AIDraftPayload,
+  AIDraftType,
+  AIIntent,
+} from "@/entities/ai/model";
 import { aiDraftTypeLabels } from "@/entities/ai/mapper";
 import { recordTypeLabels } from "@/entities/care-record/mapper";
 import { careTaskRepeatRuleLabels, careTaskTypeLabels } from "@/entities/care-task/mapper";
-import { sendAssistantMessageStream, storeAIDraft } from "@/features/ai/services/assistant.service";
+import {
+  clearStoredAIChatSnapshot,
+  getAssistantHistory,
+  listAssistantHistory,
+  readStoredAIChatSnapshot,
+  sendAssistantMessageStream,
+  storeAIChatSnapshot,
+  storeAIDraft,
+} from "@/features/ai/services/assistant.service";
 import { listPatients } from "@/features/patients/services/patient.service";
 import { formatDateTimeLabel } from "@/shared/lib/date";
 
@@ -36,6 +52,11 @@ interface ChatMessage {
 }
 
 const quickActions = [
+  {
+    icon: User,
+    label: "新增患者",
+    prompt: "帮我创建一位患者，姓名王建国，72岁，男，高血压长期管理，需要每天记录血压和用药情况",
+  },
   {
     icon: FileText,
     label: "记录护理信息",
@@ -123,6 +144,15 @@ function getDraftRows(
 ) {
   const patientId = textValue(payload.patientId, "");
   const patientName = textValue(payload.patientName, patientNameMap.get(patientId) ?? "请在确认页选择患者");
+  if (draftType === "patient") {
+    return [
+      ["姓名", textValue(payload.name)],
+      ["年龄", textValue(payload.age)],
+      ["性别", textValue(payload.gender)],
+      ["护理说明", textValue(payload.profileNote)],
+    ];
+  }
+
   if (draftType === "record") {
     const metrics = (payload.metrics ?? {}) as Record<string, unknown>;
     const rows: Array<[string, string]> = [
@@ -160,7 +190,7 @@ function getDraftRows(
 }
 
 function isConfirmableDraftType(draftType: AIDraftType): draftType is Exclude<AIDraftType, null> {
-  return draftType === "record" || draftType === "task";
+  return draftType === "record" || draftType === "task" || draftType === "patient";
 }
 
 function toAiMessage(response: AIAssistantResponse): ChatMessage {
@@ -189,7 +219,9 @@ function normalizeRiskNote(value?: string) {
 
 export function AIAssistantPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const initialPromptRef = useRef(false);
   const recognitionRef = useRef<{
     start: () => void;
     stop: () => void;
@@ -208,6 +240,26 @@ export function AIAssistantPage() {
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [patientNameMap, setPatientNameMap] = useState<Map<string, string>>(() => new Map());
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyItems, setHistoryItems] = useState<AIConversationSummary[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const snapshot = readStoredAIChatSnapshot();
+    if (!snapshot || snapshot.messages.length === 0) {
+      return;
+    }
+
+    setConversationId(snapshot.conversationId);
+    setMessages(
+      snapshot.messages.map((message) => ({
+        ...message,
+        timestamp: new Date(message.timestamp),
+      })),
+    );
+    clearStoredAIChatSnapshot();
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -239,6 +291,18 @@ export function AIAssistantPage() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (initialPromptRef.current) {
+      return;
+    }
+    const prompt = searchParams.get("prompt")?.trim();
+    if (!prompt) {
+      return;
+    }
+    initialPromptRef.current = true;
+    void handleSend(prompt);
+  }, [searchParams]);
 
   async function handleSend(text?: string) {
     const message = (text ?? input).trim();
@@ -301,6 +365,49 @@ export function AIAssistantPage() {
     }
   }
 
+  async function handleOpenHistory() {
+    setIsHistoryOpen(true);
+    setIsHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      setHistoryItems(await listAssistantHistory());
+    } catch {
+      setHistoryError("历史记录加载失败，请稍后重试。");
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }
+
+  async function handleRestoreHistory(item: AIConversationSummary) {
+    setIsHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const detail = await getAssistantHistory(item.conversationId);
+      setConversationId(detail.conversationId);
+      setMessages(
+        detail.messages.map((message) => ({
+          id: message.id,
+          role: message.role,
+          content: message.content,
+          timestamp: new Date(message.timestamp),
+          intent: message.intent ?? undefined,
+          draftType: message.draftType,
+          draftPayload: message.draftPayload,
+          sources: message.sources,
+          riskNote: normalizeRiskNote(message.riskNote ?? undefined),
+          generatedBy: message.generatedBy ?? undefined,
+        })),
+      );
+      setInput("");
+      setError(null);
+      setIsHistoryOpen(false);
+    } catch {
+      setHistoryError("这条历史记录暂时无法打开。");
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }
+
   function handleConfirmDraft(message: ChatMessage) {
     const draftType = message.draftType ?? null;
     if (!isConfirmableDraftType(draftType) || !message.draftPayload) {
@@ -313,7 +420,31 @@ export function AIAssistantPage() {
       answerText: message.content,
       riskNote: message.riskNote ?? "请核对 AI 草稿后再确认保存。",
     });
+    storeAIChatSnapshot({
+      conversationId,
+      messages: messages.map((item) => ({
+        ...item,
+        timestamp: item.timestamp.toISOString(),
+      })),
+    });
     navigate(`/ai-confirm?type=${draftType}`);
+  }
+
+  function handleBack() {
+    if (messages.length > 0 || conversationId || input.trim() || error) {
+      recognitionRef.current?.abort();
+      setMessages([]);
+      setConversationId(null);
+      setInput("");
+      setError(null);
+      setIsListening(false);
+      if (searchParams.has("prompt")) {
+        navigate("/ai-assistant", { replace: true });
+      }
+      return;
+    }
+
+    navigate(-1);
   }
 
   function handleVoiceInput() {
@@ -374,12 +505,19 @@ export function AIAssistantPage() {
   }
 
   const isEmpty = messages.length === 0 && !isSending;
+  const formatHistoryTime = (value: string) =>
+    new Date(value).toLocaleString("zh-CN", {
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
   return (
     <div className="mobile-fixed-page bg-background">
       <div className="mobile-fixed-page-header bg-gradient-to-br from-primary to-primary/80 text-white px-6 pt-12 pb-5 rounded-b-[2rem]">
         <div className="flex items-center justify-between">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2">
+          <button onClick={handleBack} className="p-2 -ml-2" aria-label="返回" type="button">
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div className="text-center">
@@ -388,7 +526,9 @@ export function AIAssistantPage() {
             </h1>
             <p className="text-xs text-white/65 mt-0.5">草稿确认后才会写入系统</p>
           </div>
-          <div className="w-10" />
+          <button onClick={() => void handleOpenHistory()} className="p-2 -mr-2" aria-label="历史记录" type="button">
+            <Clock className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
@@ -414,8 +554,8 @@ export function AIAssistantPage() {
                     className="bg-card rounded-2xl p-4 border border-border hover:border-primary/30 transition-colors text-left"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Icon className="w-4 h-4 text-primary" />
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                        <Icon className="h-5 w-5 text-primary" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium">{action.label}</p>
@@ -548,6 +688,58 @@ export function AIAssistantPage() {
           AI 回复仅供护理参考，不构成医疗诊断建议；护理记录和任务请核对后再保存。
         </p>
       </div>
+
+      {isHistoryOpen ? (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-end justify-center">
+          <div className="w-full max-w-[640px] max-h-[78vh] rounded-t-[1.5rem] bg-background border border-border shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <div>
+                <p className="text-base font-medium">AI 历史记录</p>
+                <p className="text-xs text-muted-foreground mt-0.5">点击一条记录可恢复聊天并继续提问</p>
+              </div>
+              <button
+                onClick={() => setIsHistoryOpen(false)}
+                className="h-9 w-9 rounded-full bg-muted/60 flex items-center justify-center"
+                aria-label="关闭历史记录"
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto max-h-[calc(78vh-76px)]">
+              {isHistoryLoading ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">正在加载历史记录...</p>
+              ) : null}
+              {historyError ? <p className="py-4 text-center text-sm text-accent">{historyError}</p> : null}
+              {!isHistoryLoading && !historyError && historyItems.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">暂无 AI 对话历史</p>
+              ) : null}
+              <div className="space-y-2.5">
+                {historyItems.map((item) => (
+                  <button
+                    key={item.conversationId}
+                    onClick={() => void handleRestoreHistory(item)}
+                    className="w-full rounded-2xl border border-border bg-card p-4 text-left hover:border-primary/40 transition-colors"
+                    type="button"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-medium line-clamp-1">{item.title}</p>
+                      <span className="text-[11px] text-muted-foreground shrink-0">
+                        {formatHistoryTime(item.updatedAt)}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground line-clamp-2">
+                      {item.lastMessage}
+                    </p>
+                    <p className="mt-2 text-[11px] text-primary">{item.messageCount} 条消息</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

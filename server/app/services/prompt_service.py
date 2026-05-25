@@ -9,6 +9,7 @@ from app.services.deepseek_service import SYSTEM_PROMPT
 
 AI_ASSISTANT_SYSTEM_PROMPT_KEY = "ai_assistant_system"
 AI_ASSISTANT_QA_PROMPT_KEY = "ai_assistant_qa"
+AI_ASSISTANT_PATIENT_PROMPT_KEY = "ai_assistant_patient_draft"
 AI_ASSISTANT_RECORD_PROMPT_KEY = "ai_assistant_record_draft"
 AI_ASSISTANT_TASK_PROMPT_KEY = "ai_assistant_task_draft"
 AI_RAG_POLICY_PROMPT_KEY = "ai_rag_policy"
@@ -46,6 +47,12 @@ DEFAULT_PROMPT_TEMPLATES = [
         "name": "护理问答 Prompt",
         "description": "用于 AI 助手回答护理问题时的表达边界和知识库引用要求。",
         "content": "回答护理问题时，优先引用知识库片段，给出可执行的照护观察和记录建议；知识不足时说明需要咨询专业医护人员，不要编造诊断结论。",
+    },
+    {
+        "key": AI_ASSISTANT_PATIENT_PROMPT_KEY,
+        "name": "患者信息草稿 Prompt",
+        "description": "用于 AI 助手生成患者信息草稿，约束患者姓名、年龄、性别和护理说明。",
+        "content": "生成患者信息草稿时，只能把用户明确提供的信息写入 draftPayload。intent 必须为 care_patient，draftType 必须为 patient；draftPayload 必须包含 name、age、gender、profileNote。gender 只能是 男、女、其他；无法确认的字段留空或使用 0。",
     },
     {
         "key": AI_ASSISTANT_RECORD_PROMPT_KEY,
@@ -153,18 +160,24 @@ def get_active_ai_system_prompt(db: Session) -> str:
     return get_active_prompt_content(db, AI_ASSISTANT_SYSTEM_PROMPT_KEY, SYSTEM_PROMPT)
 
 
-def get_active_ai_intent_prompt(db: Session, intent: Literal["qa", "care_record", "care_task"]) -> str:
+def get_active_ai_intent_prompt(db: Session, intent: Literal["qa", "care_record", "care_task", "care_patient"]) -> str:
+    if intent == "care_patient":
+        return get_active_prompt_content(
+            db,
+            AI_ASSISTANT_PATIENT_PROMPT_KEY,
+            DEFAULT_PROMPT_TEMPLATES[2]["content"],
+        )
     if intent == "care_record":
         return get_active_prompt_content(
             db,
             AI_ASSISTANT_RECORD_PROMPT_KEY,
-            DEFAULT_PROMPT_TEMPLATES[2]["content"],
+            DEFAULT_PROMPT_TEMPLATES[3]["content"],
         )
     if intent == "care_task":
         return get_active_prompt_content(
             db,
             AI_ASSISTANT_TASK_PROMPT_KEY,
-            DEFAULT_PROMPT_TEMPLATES[3]["content"],
+            DEFAULT_PROMPT_TEMPLATES[4]["content"],
         )
     return get_active_prompt_content(
         db,
@@ -177,7 +190,7 @@ def get_active_rag_policy_prompt(db: Session) -> str:
     return get_active_prompt_content(
         db,
         AI_RAG_POLICY_PROMPT_KEY,
-        DEFAULT_PROMPT_TEMPLATES[4]["content"],
+        DEFAULT_PROMPT_TEMPLATES[5]["content"],
     )
 
 

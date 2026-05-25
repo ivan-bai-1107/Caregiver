@@ -146,17 +146,10 @@ export function PatientDetailPage() {
                   <span className="text-sm font-medium">{detailView.patient.gender}</span>
                 </div>
                 <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-muted-foreground">页面聚合病情说明</span>
+                  <span className="text-sm text-muted-foreground">护理说明</span>
                   <span className="text-sm font-medium">{detailView.conditionSummary}</span>
                 </div>
               </div>
-            </div>
-
-            <div className="bg-card rounded-2xl p-5 border border-border">
-              <h2 className="text-sm text-muted-foreground mb-3 uppercase tracking-wide">护理说明</h2>
-              <p className="text-sm leading-relaxed text-foreground/80">
-                {detailView.patient.profileNote}
-              </p>
             </div>
           </div>
         ) : null}
@@ -404,12 +397,6 @@ export function PatientDetailPage() {
       </div>
       </div>
 
-      <button
-        onClick={() => navigate(appRoutes.aiAssistant)}
-        className="fixed bottom-24 right-5 w-14 h-14 bg-primary text-white rounded-2xl shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors z-20"
-      >
-        <Sparkles className="w-6 h-6" />
-      </button>
     </div>
   );
 }

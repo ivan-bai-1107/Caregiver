@@ -13,6 +13,12 @@ class UserProfile(CamelModel):
 class UserProfileUpdate(CamelModel):
     username: str = Field(min_length=1, max_length=80)
     email: EmailStr
+    email_code: str | None = Field(default=None, max_length=16)
+
+
+class UserPasswordUpdate(CamelModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=6, max_length=128)
 
 
 class UserAvatarUpdate(CamelModel):
