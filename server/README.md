@@ -4,6 +4,26 @@ FastAPI 后端服务，提供 Auth、Users/Profile、Home、Patients、Care Reco
 
 ## 环境准备
 
+推荐直接在仓库根目录用 Docker 启动完整系统：
+
+```powershell
+docker compose up -d --build
+```
+
+Compose 会启动 PostgreSQL、Redis、FastAPI 后端和 React 前端，并在后端容器启动时自动执行 Alembic 迁移。首次启动默认生成演示数据：
+
+- 客户端：`caregiver@example.com` / `password123`
+- 后台：`admin@example.com` / `admin123`
+
+服务地址：
+
+- 客户端：http://127.0.0.1:5173/
+- 后台：http://127.0.0.1:5173/admin/login
+- API：http://127.0.0.1:8000
+- Health：http://127.0.0.1:8000/health
+
+下面是非 Docker 的本地 Python 启动方式：
+
 ```powershell
 cd server
 python -m venv .venv
@@ -43,41 +63,23 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-v4-flash
 ```
 
-## Docker PostgreSQL
+## Docker 说明
 
-```powershell
-docker run --name caregiver_postgres `
-  -e POSTGRES_USER=caregiver `
-  -e POSTGRES_PASSWORD=caregiver123 `
-  -e POSTGRES_DB=caregiver_system `
-  -p 5432:5432 `
-  -d postgres:16
+仓库根目录 `docker-compose.yml` 中所有服务都加入同一个 `caregiver` 网络：
+
+- `caregiver_postgres`
+- `caregiver_redis`
+- `caregiver_server`
+- `caregiver_client`
+
+后端容器内使用服务名连接依赖：
+
+```env
+DATABASE_URL=postgresql+psycopg://caregiver:caregiver123@postgres:5432/caregiver_system
+REDIS_URL=redis://redis:6379/0
 ```
-
-## Docker Redis
 
 Redis 当前用于邮箱验证码缓存、验证码发送限流、验证码错误锁定、登录失败锁定、AI 调用限流，以及聚合接口短缓存。验证码仍会写入数据库作为 fallback，因此 Redis 宕机不会让注册链路直接失败；限流和缓存会退化为不生效，业务接口继续查数据库。
-
-单独创建 Redis：
-
-```powershell
-docker run --name caregiver_redis `
-  -p 6379:6379 `
-  -v caregiver_redis_data:/data `
-  -d redis:7-alpine redis-server --appendonly yes
-```
-
-或使用仓库根目录的 Compose 文件：
-
-```powershell
-docker compose up -d redis
-```
-
-同时创建 PostgreSQL 和 Redis：
-
-```powershell
-docker compose up -d
-```
 
 检查 Redis：
 

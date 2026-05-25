@@ -28,6 +28,22 @@ export class ApiError extends Error {
 
 function buildUrl(path: string, query?: Record<string, QueryValue>) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (!env.apiBaseUrl) {
+    const params = new URLSearchParams();
+    if (query) {
+      Object.entries(query).forEach(([key, value]) => {
+        if (value === null || value === undefined || value === "") {
+          return;
+        }
+
+        params.set(key, String(value));
+      });
+    }
+
+    const queryString = params.toString();
+    return queryString ? `${normalizedPath}?${queryString}` : normalizedPath;
+  }
+
   const url = new URL(`${env.apiBaseUrl}${normalizedPath}`);
 
   if (query) {

@@ -34,11 +34,79 @@ services:
       timeout: 5s
       retries: 5
 
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: caregiver_server
+    environment:
+      DATABASE_URL: postgresql+psycopg://caregiver:caregiver123@postgres:5432/caregiver_system
+      REDIS_URL: redis://redis:6379/0
+      REDIS_ENABLED: "true"
+      EMAIL_CODE_TTL_SECONDS: "600"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-please-change-this-for-local-development}
+      CORS_ORIGIN_REGEX: ^http://(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+):(5173|5174)$
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
+      SMTP_HOST: ${SMTP_HOST:-smtp.qq.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-true}
+      SMTP_USE_STARTTLS: ${SMTP_USE_STARTTLS:-false}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Caregiver 护理助手}
+      EMAIL_DEBUG_CODE: ${EMAIL_DEBUG_CODE:-true}
+      EMAIL_SEND_TIMEOUT_SECONDS: ${EMAIL_SEND_TIMEOUT_SECONDS:-10}
+      AI_PROVIDER: ${AI_PROVIDER:-deepseek}
+      AI_USE_REAL_MODEL: ${AI_USE_REAL_MODEL:-true}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-flash}
+      CONTENT_MODERATION_ENABLED: ${CONTENT_MODERATION_ENABLED:-true}
+      CONTENT_MODERATION_BASE_URL: ${CONTENT_MODERATION_BASE_URL:-https://v1.apizero.cn}
+      CONTENT_MODERATION_PATH: ${CONTENT_MODERATION_PATH:-/api/content-moderation}
+      CONTENT_MODERATION_API_KEY: ${CONTENT_MODERATION_API_KEY:-}
+      CONTENT_MODERATION_TIMEOUT_SECONDS: ${CONTENT_MODERATION_TIMEOUT_SECONDS:-10}
+      SEED_DEMO_DATA_ON_START: ${SEED_DEMO_DATA_ON_START:-true}
+      RESET_DEMO_DATA_ON_START: ${RESET_DEMO_DATA_ON_START:-false}
+    ports:
+      - "8001:8000"
+    volumes:
+      - caregiver_server_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - caregiver
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-__RELATIVE__}
+    container_name: caregiver_client
+    ports:
+      - "5173:5173"
+    depends_on:
+      server:
+        condition: service_healthy
+    networks:
+      - caregiver
+
 volumes:
   caregiver_postgres_data:
   caregiver_redis_data:
+  caregiver_server_uploads:
 
 networks:
   caregiver:
     name: caregiver
-    driver: bridge
+    external: true

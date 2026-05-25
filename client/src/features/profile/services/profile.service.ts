@@ -52,7 +52,7 @@ export function resolveProfileMediaUrl(url: string) {
     return url;
   }
 
-  const apiOrigin = new URL(env.apiBaseUrl).origin;
+  const apiOrigin = env.apiBaseUrl ? new URL(env.apiBaseUrl).origin : window.location.origin;
   return `${apiOrigin}${url.startsWith("/") ? url : `/${url}`}`;
 }
 

@@ -53,78 +53,88 @@ uvicorn app.main:app --reload
 
 `/health` 会返回 Redis 状态，例如 `redis: ok` 或 `redis: unavailable`。
 
-## Docker PostgreSQL
+## Docker 全套启动
 
-本地 `.env` 中配置：
+仓库根目录的 `docker-compose.yml` 已经包含完整运行环境：
+
+- `postgres`：PostgreSQL 16，容器名 `caregiver_postgres`
+- `redis`：Redis 7，容器名 `caregiver_redis`
+- `server`：FastAPI 后端，容器名 `caregiver_server`
+- `client`：Nginx 托管的 React 前端，容器名 `caregiver_client`
+
+首次启动：
+
+```powershell
+docker compose up -d --build
+```
+
+启动后访问：
+
+- 客户端：http://127.0.0.1:5173/
+- 后台：http://127.0.0.1:5173/admin/login
+- 后端直连：http://127.0.0.1:8001
+- Health：http://127.0.0.1:8001/health 或 http://127.0.0.1:5173/api/health
+
+局域网访问时把 `127.0.0.1` 换成当前机器 IP，例如：
+
+- 客户端：`http://192.168.3.192:5173/`
+- 后台：`http://192.168.3.192:5173/admin/login`
+
+Docker 版前端默认使用同源 `/api` 反向代理，所以局域网访问不需要额外改前端配置。如果部署到独立后端地址，可以在根目录 `.env` 中设置：
 
 ```env
-DATABASE_URL=postgresql+psycopg://caregiver:caregiver123@127.0.0.1:5432/caregiver_system
-
-REDIS_URL=redis://127.0.0.1:6379/0
-REDIS_ENABLED=true
-EMAIL_CODE_TTL_SECONDS=600
-
-JWT_SECRET_KEY=please-change-this-for-local-development
-
-EMAIL_PROVIDER=console
-SMTP_HOST=smtp.qq.com
-SMTP_PORT=465
-SMTP_USE_SSL=true
-SMTP_USE_STARTTLS=false
-SMTP_USERNAME=
-SMTP_PASSWORD=
-EMAIL_FROM=
-EMAIL_FROM_NAME=Caregiver 护理助手
-EMAIL_DEBUG_CODE=true
-EMAIL_SEND_TIMEOUT_SECONDS=10
-
-AI_PROVIDER=deepseek
-AI_USE_REAL_MODEL=true
-DEEPSEEK_API_KEY=
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-v4-flash
+VITE_API_BASE_URL=__RELATIVE__
 ```
 
-如需创建本地 PostgreSQL 容器：
+可先复制占位配置：
 
 ```powershell
-docker run --name caregiver_postgres `
-  -e POSTGRES_USER=caregiver `
-  -e POSTGRES_PASSWORD=caregiver123 `
-  -e POSTGRES_DB=caregiver_system `
-  -p 5432:5432 `
-  -d postgres:16
+Copy-Item .env.docker.example .env
 ```
 
-## Docker Redis
+`.env` 只放本机真实配置，不要提交。QQ 邮箱授权码、DeepSeek key、内容审核 key 都放这里。
 
-Redis 当前用于邮箱验证码缓存、验证码发送限流、验证码错误锁定、登录失败锁定、AI 调用限流，以及 Admin Dashboard / Care Workbench / Knowledge Categories 的短缓存。验证码仍会写入数据库作为 fallback，所以 Redis 不可用时不会让注册主流程直接失败；限流和缓存会退化为不生效，业务接口继续查数据库。
-
-单独创建 Redis：
+常用命令：
 
 ```powershell
-docker run --name caregiver_redis `
-  -p 6379:6379 `
-  -v caregiver_redis_data:/data `
-  -d redis:7-alpine redis-server --appendonly yes
+docker compose ps
+docker compose logs -f server
+docker compose logs -f client
+docker compose down
 ```
 
-也可以使用仓库根目录的 Compose 文件：
+如果需要清库并重新生成演示数据：
 
 ```powershell
-docker compose up -d redis
+docker compose down -v
+docker compose up -d --build
 ```
 
-如果 PostgreSQL 也要一起创建：
+也可以不删除数据库卷，只强制重建演示数据：
 
 ```powershell
+docker compose run --rm -e RESET_DEMO_DATA_ON_START=true server true
 docker compose up -d
 ```
+
+后端容器启动时会自动执行：
+
+- `python -m alembic upgrade head`
+- 首次启动默认执行 `python scripts/reset_demo_data.py`
+
+默认演示账号：
+
+- 客户端：`caregiver@example.com` / `password123`
+- 后台：`admin@example.com` / `admin123`
+
+## Redis 用途
+
+Redis 当前用于邮箱验证码缓存、验证码发送限流、验证码错误锁定、登录失败锁定、AI 调用限流，以及 Admin Dashboard / Care Workbench / Knowledge Categories 的短缓存。验证码仍会写入数据库作为 fallback，所以 Redis 不可用时不会让注册主流程直接失败；限流和缓存会退化为不生效，业务接口继续查数据库。
 
 查看健康状态：
 
 ```powershell
-curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:5173/api/health
 ```
 
 `/health` 会返回 `redis: ok` 或 `redis: unavailable`。
